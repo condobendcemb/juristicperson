@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ juristic.name }}{% endblock %}
+{% block header %}ข้อมูลภาพรวม{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm p-4">
+            <h3>ยินดีต้อนรับ, {{ juristic.name }}</h3>
+            <p class="text-muted">ตรวจสอบสถานะห้องพักล่าสุดของคุณได้ที่นี่</p>
+            
+            <table class="table table-hover mt-4">
+                <thead class="table-light">
+                    <tr>
+                        <th>เลขห้อง</th>
+                        <th>สถานะ</th>
+                        <th>จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for room in rooms %}
+                    <tr>
+                        <td>{{ room.room_no }}</td>
+                        <td><span class="badge bg-success">ปกติ</span></td>
+                        <td><button class="btn btn-sm btn-outline-primary">แก้ไข</button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
