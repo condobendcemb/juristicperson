@@ -7,30 +7,30 @@ services:
     # เลือก Port 5005 เพื่อไม่ให้ชนกับ bcondo (5000) และตัวอื่นๆ (5002)
     ports:
       - "5005:5000"
-    
+
     # [HOT RELOAD] เชื่อมไฟล์ในเครื่อง (F:\workspace\juristicperson) เข้าไปใน Container
     volumes:
       - .:/app
-    
+
     # [RUN ALWAYS] สั่งให้รันตลอดเวลา แม้เครื่องจะ Restart หรือแอป Crash
     restart: always
-    
+
     # docker-compose.yml ของโปรเจกต์ juristicperson
     environment:
       # เปลี่ยน [USER] และ [PASSWORD] ให้ตรงกับของ condo_postgres
-      # - DATABASE_URL=postgresql://myuser:mypassword@host.docker.internal:5433/juristic_db
-      - DATABASE_URL=postgresql://postgres:[PASSWORD_จริง_ของคุณ]@host.docker.internal:5433/juristic_db
+      - DATABASE_URL=postgresql://myuser:mypassword@host.docker.internal:5433/juristic_db
+      # - DATABASE_URL=postgresql://postgres:[PASSWORD_จริง_ของคุณ]@host.docker.internal:5433/juristic_db
       - FLASK_APP=app.py
       - FLASK_DEBUG=1
       - SECRET_KEY=your-secret-key-here
-    
+
     # จำกัด Log ไม่ให้บวมจนเต็ม Disk
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-    
+
     # อนุญาตให้คุยกับ localhost (Postgres) ของเครื่อง Host ได้
     extra_hosts:
       - "host.docker.internal:host-gateway"

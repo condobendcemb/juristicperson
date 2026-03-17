@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+
+{% block title %}บันทึกรายการประจำงวด - {{ juristic.name }}{% endblock %}
+{% block header %}บันทึกรายการประจำงวด (Periodic Records){% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm p-4 mb-4">
+            <div id="summaryArea" class="mb-3 d-none">
+                <div id="summaryContent" class="d-flex flex-wrap gap-2 small">
+                    <!-- Compact summary items -->
+                </div>
+                <hr class="my-2 opacity-25">
+            </div>
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">เลือกประจำงวด (Period)</label>
+                    <div class="input-group">
+                        <select id="periodSelect" class="form-select">
+                            {% for p in periods %}
+                            <option value="{{ p }}">{{ p }}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="input-group-text small">งวดที่</span>
+                        <input type="number" id="seqSelect" class="form-control" value="1" min="1"
+                            style="max-width: 70px;">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">เลือกประเภทรายได้</label>
+                    <select id="incomeSelect" class="form-select">
+                        <option value="">-- เลือกรายการ --</option>
+                        {% for inc in incomes %}
+                        <option value="{{ inc.id }}">{{ inc.name }} ({{ inc.condition }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- <div class="col-md-2">
+                    <button class="btn btn-primary w-100 shadow-sm" onclick="initRecords()">
+                        <i class="fas fa-search me-2"></i>ดึงข้อมูล
+                    </button>
+                </div> -->
+            </div>
+        </div>
+    </div>
+
+
+
+    <div id="recordCard" class="card border-0 shadow-sm p-4 d-none">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0 fw-bold">รายการบันทึก: <span id="displayIncome" class="text-primary"></span> (<span
+                    id="displayPeriod" class="text-muted"></span>)</h6>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-info" onclick="autoCalculate(false, true)">
+                    <i class="fas fa-calculator me-1"></i>คำนวณอัตโนมัติ
+                </button>
+                <button class="btn btn-sm btn-success shadow-sm" onclick="saveRecords()">
+                    <i class="fas fa-save me-1"></i>บันทึกทั้งหมด
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" id="recordTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 100px;">เลขห้อง</th>
+                        <th id="thPrev" style="width: 120px;">เลขมิเตอร์ก่อนหน้า</th>
+                        <th id="thCurr" style="width: 120px;">เลขมิเตอร์ปัจจุบัน</th>
+                        <th id="thUsed" style="width: 100px;">ใช้ไป</th>
+                        <th style="width: 100px;">อัตรา</th>
+                        <th style="width: 150px;">รวมเงิน (Total)</th>
+                        <th>หมายเหตุ</th>
+                    </tr>
+                </thead>
+                <tbody id="recordBody">
+                    <!-- Dynamic content -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    let currentData = [];
+    let currentCondition = '';
+    let incomeRate = 0;
+    let isDirty = false;
+    let lastState = {
+        period: document.getElementById('periodSelect').value,
+        seq: document.getElementById('seqSelect').value,
+        incomeId: document.getElementById('incomeSelect').value
+    };
+
+    async function handleAutoLoad() {
+        if (isDirty) {
+            const confirm = await Swal.fire({
+                title: 'เปลี่ยนรายการ?',
+                text: "คุณมีการแก้ไขข้อมูลค้างไว้ หากเปลี่ยนรายการข้อมูลที่แก้ไว้จะหายไป ต้องการเปลี่ยนใช่หรือไม่?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, เปลี่ยนเลย',
+                cancelButtonText: 'ยกเลิก'
+            });
+            if (!confirm.isConfirmed) {
+                // คืนค่าเดิมให้ dropdown
+                document.getElementById('periodSelect').value = lastState.period;
+                document.getElementById('seqSelect').value = lastState.seq;
+                document.getElementById('incomeSelect').value = lastState.incomeId;
+                return;
+            }
+        }
+        loadSummary();
+        initRecords();
+    }
+
+    async function loadSummary() {
+        const period = document.getElementById('periodSelect').value;
+        const seq = document.getElementById('seqSelect').value;
+        try {
+            const res = await fetch(`/record/summary?period=${period}&seq_no=${seq}`);
+            const result = await res.json();
+            const summaryArea = document.getElementById('summaryArea');
+            const summaryContent = document.getElementById('summaryContent');
+
+            if (result.success && result.summary.length > 0) {
+                summaryContent.innerHTML = '<span class="text-muted me-2 small fw-bold">สรุปยอดที่บันทึกแล้ว:</span>' + result.summary.map(s => `
+                    <span class="badge bg-white text-dark border border-secondary-subtle me-1">
+                        ${s.name}: <span class="text-primary fw-bold">${s.count} ห้อง</span> 
+                        <span class="mx-1 text-muted">|</span> 
+                        <span class="text-success fw-bold">${s.total.toLocaleString(undefined, {minimumFractionDigits:2})} บ.</span>
+                    </span>
+                `).join('');
+                summaryArea.classList.remove('d-none');
+            } else {
+                summaryArea.classList.add('d-none');
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    // เรียกตอนเปลี่ยนงวด หรือ เปลี่ยนลำดับงวด หรือ ประเภทรายได้
+    document.getElementById('periodSelect').addEventListener('change', handleAutoLoad);
+    document.getElementById('seqSelect').addEventListener('change', handleAutoLoad);
+    document.getElementById('incomeSelect').addEventListener('change', handleAutoLoad);
+
+    // เรียกตอนโหลดหน้า
+    window.addEventListener('DOMContentLoaded', loadSummary);
+
+    async function initRecords() {
+        const period = document.getElementById('periodSelect').value;
+        const seq = document.getElementById('seqSelect').value;
+        const incomeId = document.getElementById('incomeSelect').value;
+
+        if (!incomeId) {
+            Swal.fire('Warning', 'กรุณาเลือกประเภทรายได้', 'warning');
+            return;
+        }
+
+        Swal.fire({
+            title: 'กำลังโหลดข้อมูล...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        try {
+            const formData = new FormData();
+            formData.append('period', period);
+            formData.append('seq_no', seq);
+            formData.append('income_id', incomeId);
+
+            const res = await fetch('/record/init', { method: 'POST', body: formData });
+            const result = await res.json();
+
+            if (result.success) {
+                Swal.close();
+                currentData = result.data;
+                currentCondition = result.condition;
+                incomeRate = result.income_rate;
+                isDirty = false; // รีเซ็ต flag เมื่อโหลดใหม่สำเร็จ
+
+                // อัปเดตสถานะล่าสุด
+                lastState.period = period;
+                lastState.seq = seq;
+                lastState.incomeId = incomeId;
+
+                autoCalculate(true); 
+                renderTable();
+
+                document.getElementById('displayIncome').innerText = document.getElementById('incomeSelect').options[document.getElementById('incomeSelect').selectedIndex].text;
+                document.getElementById('displayPeriod').innerText = period;
+                document.getElementById('recordCard').classList.remove('d-none');
+            } else {
+                Swal.fire('Error', result.message, 'error');
+            }
+        } catch (e) {
+            Swal.fire('Error', 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้', 'error');
+        }
+    }
+
+    function renderTable() {
+        const body = document.getElementById('recordBody');
+        body.innerHTML = '';
+
+        // ปรับหัวตารางตามเงื่อนไข
+        const thPrev = document.getElementById('thPrev');
+        const thCurr = document.getElementById('thCurr');
+        const thUsed = document.getElementById('thUsed');
+
+        if (currentCondition === 'คูณหน่วย') {
+            thPrev.innerText = 'เลขมิเตอร์ก่อนหน้า';
+            thCurr.innerText = 'เลขมิเตอร์ปัจจุบัน';
+            thUsed.innerText = 'ใช้ไป';
+            thPrev.style.display = thCurr.style.display = thUsed.style.display = '';
+        } else if (currentCondition === 'คูณพื้นที่') {
+            thPrev.innerText = 'พื้นที่ (Sq.m.)';
+            thCurr.style.display = thUsed.style.display = 'none';
+            thPrev.style.display = '';
+        } else if (currentCondition === 'คูณกรรมสิทธิ์') {
+            thPrev.innerText = 'อัตราส่วนฯ';
+            thCurr.style.display = thUsed.style.display = 'none';
+            thPrev.style.display = '';
+        } else {
+            // คงที่
+            thPrev.style.display = thCurr.style.display = thUsed.style.display = 'none';
+        }
+
+        currentData.forEach((item, index) => {
+            const row = document.createElement('tr');
+            let unitHtml = '';
+
+            if (currentCondition === 'คูณหน่วย') {
+                unitHtml = `
+                    <td><input type="number" step="0.01" class="form-control form-control-sm" value="${item.prev_unit}" onchange="updateRow(${index}, 'prev_unit', this.value)"></td>
+                    <td><input type="number" step="0.01" class="form-control form-control-sm" id="curr_input_${index}" value="${item.curr_unit}" onchange="updateRow(${index}, 'curr_unit', this.value)"></td>
+                    <td class="text-center"><span id="used_${index}">${item.used_unit}</span></td>
+                `;
+            } else if (currentCondition === 'คูณพื้นที่') {
+                unitHtml = `<td>${item.sq_area}</td>`;
+            } else if (currentCondition === 'คูณกรรมสิทธิ์') {
+                unitHtml = `<td>${item.ratio}</td>`;
+            }
+
+            row.innerHTML = `
+                <td class="fw-bold">${item.room_no}</td>
+                ${unitHtml}
+                <td><input type="number" step="0.01" class="form-control form-control-sm" value="${item.rate}" onchange="updateRow(${index}, 'rate', this.value)"></td>
+                <td><input type="number" step="0.01" class="form-control form-control-sm" id="total_${index}" value="${item.total_amt}" onchange="updateRow(${index}, 'total_amt', this.value)"></td>
+                <td><input type="text" class="form-control form-control-sm" value="${item.remark}" onchange="updateRow(${index}, 'remark', this.value)"></td>
+            `;
+
+            if (item.is_billed) {
+                row.classList.add('table-secondary');
+                row.querySelectorAll('input').forEach(i => i.disabled = true);
+            }
+
+            body.appendChild(row);
+        });
+    }
+
+    function updateRow(index, field, value) {
+        isDirty = true; // Mark as modified
+        const item = currentData[index];
+        item[field] = value;
+
+        if (currentCondition === 'คูณหน่วย' && (field === 'prev_unit' || field === 'curr_unit' || field === 'rate')) {
+            const curr = parseFloat(item.curr_unit) || 0;
+            const prev = parseFloat(item.prev_unit) || 0;
+            const inputCurr = document.getElementById(`curr_input_${index}`);
+
+            // ตรวจสอบความถูกต้อง: ถ้าน้อยกว่าเดิม และ ไม่ใช่ 0 (0 คืออนุญาตให้ข้ามได้)
+            const isInvalid = (curr < prev && curr > 0);
+            
+            if (isInvalid) {
+                inputCurr.classList.add('is-invalid');
+            } else {
+                inputCurr.classList.remove('is-invalid');
+            }
+
+            // คำนวณหน่วยที่ใช้: ถ้าติดลบให้เป็น 0
+            let used = curr - prev;
+            if (used < 0) used = 0;
+            
+            item.used_unit = used;
+            item.total_amt = item.used_unit * (parseFloat(item.rate) || 0);
+
+            const usedDisplay = document.getElementById(`used_${index}`);
+            usedDisplay.innerText = used.toFixed(2);
+            usedDisplay.className = isInvalid ? 'text-danger fw-bold' : '';
+            
+            document.getElementById(`total_${index}`).value = item.total_amt.toFixed(2);
+        } else if (field === 'rate' && (currentCondition === 'คูณพื้นที่' || currentCondition === 'คูณกรรมสิทธิ์' || currentCondition === 'คงที่')) {
+            recalcTotal(index);
+        }
+    }
+
+    function recalcTotal(index) {
+        const item = currentData[index];
+        const rate = parseFloat(item.rate) || 0;
+
+        if (currentCondition === 'คูณพื้นที่') {
+            item.total_amt = (item.sq_area || 0) * rate;
+        } else if (currentCondition === 'คูณกรรมสิทธิ์') {
+            item.total_amt = (item.ratio || 0) * rate;
+        } else if (currentCondition === 'คงที่') {
+            item.total_amt = rate;
+        }
+
+        document.getElementById(`total_${index}`).value = item.total_amt.toFixed(2);
+    }
+
+    function autoCalculate(skipRender = false, forceAll = false) {
+        currentData.forEach((item, index) => {
+            if (item.is_billed) return;
+
+            // ถ้ามี record_id แล้ว (แสดงว่าบันทึกไว้แล้ว) และไม่ต้องการคำนวณใหม่ ให้ข้ามไป
+            if (item.record_id && !forceAll) return;
+
+            const rate = parseFloat(item.rate) || 0;
+            if (currentCondition === 'คูณพื้นที่') {
+                item.total_amt = (parseFloat(item.sq_area) || 0) * rate;
+            } else if (currentCondition === 'คูณกรรมสิทธิ์') {
+                item.total_amt = (parseFloat(item.ratio) || 0) * rate;
+            } else if (currentCondition === 'คงที่') {
+                item.total_amt = rate;
+            } else if (currentCondition === 'คูณหน่วย') {
+                item.used_unit = (parseFloat(item.curr_unit) || 0) - (parseFloat(item.prev_unit) || 0);
+                if (item.used_unit < 0) item.used_unit = 0;
+                item.total_amt = item.used_unit * rate;
+            }
+        });
+        if (!skipRender) renderTable();
+    }
+
+    async function saveRecords() {
+        const errors = document.querySelectorAll('.is-invalid');
+        if (errors.length > 0) {
+            Swal.fire('Error', 'กรุณาแก้ไขเลขมิเตอร์ที่น้อยกว่าหน่วยก่อนหน้า (ช่องสีแดง) ก่อนบันทึก', 'error');
+            return;
+        }
+
+        // เช็คว่ามีรายการที่เคยบันทึกไว้แล้วหรือไม่ (มี record_id)
+        const hasExisting = currentData.some(item => item.record_id);
+        if (hasExisting) {
+            const confirm = await Swal.fire({
+                title: 'ยืนยันการบันทึกทับ?',
+                text: "พบข้อมูลที่เคยบันทึกไว้แล้วในงวดนี้ คุณต้องการบันทึกทับข้อมูลเดิมใช่หรือไม่?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#aaa',
+                confirmButtonText: 'ใช่, บันทึกทับ',
+                cancelButtonText: 'ยกเลิก'
+            });
+            if (!confirm.isConfirmed) return;
+        }
+
+        const period = document.getElementById('periodSelect').value;
+        const seq = document.getElementById('seqSelect').value;
+        const incomeId = document.getElementById('incomeSelect').value;
+
+        Swal.fire({
+            title: 'กำลังบันทึก...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        try {
+            const res = await fetch('/record/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    period: period,
+                    seq_no: seq,
+                    income_id: incomeId,
+                    records: currentData
+                })
+            });
+
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', timer: 1500, showConfirmButton: false });
+                isDirty = false; // รีเซ็ต flag เมื่อบันทึกสำเร็จ
+                loadSummary(); // อัปเดตสรุปด้านบน
+                initRecords(); // โหลดข้อมูลใหม่เพื่อให้ได้ record_id ของรายการที่เพิ่งบันทึก
+            } else {
+                Swal.fire('Error', result.message, 'error');
+            }
+        } catch (e) {
+            Swal.fire('Error', 'เซิร์ฟเวอร์ขัดข้อง', 'error');
+        }
+    }
+</script>
+
+<style>
+    .form-control-sm {
+        font-size: 0.8rem;
+    }
+</style>
+{% endblock %}

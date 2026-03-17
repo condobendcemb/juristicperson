@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}จัดการรายการรายได้ - {{ juristic.name }}{% endblock %}
+{% block header %}ตั้งค่ารายการรายได้ (Income Setup){% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0">รายการค่าใช้จ่าย/รายได้: <span class="text-primary">{{ juristic.name }}</span></h5>
+                <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addIncomeModal">
+                    <i class="fas fa-plus me-2"></i>เพิ่มรายการใหม่
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover mt-2 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ชื่อรายการ</th>
+                            <th>อัตรา (Rate)</th>
+                            <th>เงื่อนไข</th>
+                            <th>ค่าปรับ (Penalty)</th>
+                            <th>VAT</th>
+                            <th>สถานะ</th>
+                            <th class="text-end">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inc in incomes %}
+                        <tr>
+                            <td class="fw-bold text-dark">{{ inc.name }}</td>
+                            <td>{{ "{:,.2f}".format(inc.rate or 0) }}</td>
+                            <td><small class="text-muted">{{ inc.condition or '-' }}</small></td>
+                            <td>{{ "{:,.2f}".format(inc.penalty or 0) }}</td>
+                            <td>
+                                {% if inc.is_vat %}
+                                    <span class="badge bg-info">Vat 7%</span>
+                                {% else %}
+                                    <span class="text-muted small">No Vat</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if inc.active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="editIncome({{ inc.id }})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteIncome({{ inc.id }}, '{{ inc.name }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">ยังไม่ได้ตั้งค่ารายการรายได้</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal เพิ่ม Income -->
+<div class="modal fade" id="addIncomeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">เพิ่มรายการรายได้ใหม่</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/income/add" method="POST" onsubmit="return handleFormSubmit(event, this)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">ชื่อรายการรายได้ <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required placeholder="เช่น ค่าส่วนกลาง, ค่าน้ำ">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">อัตรา (ต่อหน่วย/เหมา)</label>
+                            <input type="number" step="0.01" name="rate" class="form-control" value="0.00">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">ค่าปรับ (Penalty)</label>
+                            <input type="number" step="0.01" name="penalty" class="form-control" value="0.00">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-primary">รูปแบบการคำนวณ <span class="text-danger">*</span></label>
+                        <select name="condition" class="form-select" required>
+                            <option value="คงที่">คงที่ (Fixed Amount)</option>
+                            <option value="คูณหน่วย">คูณหน่วย (Rate x Units)</option>
+                            <option value="คูณพื้นที่">คูณพื้นที่ (Rate x Sq.m.)</option>
+                            <option value="คูณกรรมสิทธิ์">คูณกรรมสิทธิ์ (Rate x Ownership Ratio)</option>
+                        </select>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_vat">
+                        <label class="form-check-label small fw-bold">คำนวณภาษีมูลค่าเพิ่ม (VAT 7%)</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal แก้ไข Income -->
+<div class="modal fade" id="editIncomeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">แก้ไขรายการรายได้</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editIncomeForm" onsubmit="return handleUpdateIncome(event, this)">
+                <input type="hidden" name="id" id="editIncId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">ชื่อรายการรายได้ <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="editIncName" class="form-control" required>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">อัตรา (ต่อหน่วย/เหมา)</label>
+                            <input type="number" step="0.01" name="rate" id="editIncRate" class="form-control">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">ค่าปรับ (Penalty)</label>
+                            <input type="number" step="0.01" name="penalty" id="editIncPenalty" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-primary">รูปแบบการคำนวณ <span class="text-danger">*</span></label>
+                        <select name="condition" id="editIncCondition" class="form-select" required>
+                            <option value="คงที่">คงที่ (Fixed Amount)</option>
+                            <option value="คูณหน่วย">คูณหน่วย (Rate x Units)</option>
+                            <option value="คูณพื้นที่">คูณพื้นที่ (Rate x Sq.m.)</option>
+                            <option value="คูณกรรมสิทธิ์">คูณกรรมสิทธิ์ (Rate x Ownership Ratio)</option>
+                        </select>
+                    </div>
+                    <div class="d-flex gap-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="is_vat" id="editIncVat">
+                            <label class="form-check-label small fw-bold">VAT 7%</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="active" id="editIncActive">
+                            <label class="form-check-label small fw-bold">Active</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึกการเปลี่ยนแปลง</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    async function handleFormSubmit(event, form) {
+        event.preventDefault();
+        const btn = form.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        try {
+            const res = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire({ icon: 'success', title: 'สำเร็จ!', timer: 1500, showConfirmButton: false }).then(() => window.location.reload());
+            } else {
+                Swal.fire('Error', result.message, 'error');
+                btn.disabled = false;
+            }
+        } catch (e) { Swal.fire('Error', 'เซิร์ฟเวอร์ขัดข้อง', 'error'); btn.disabled = false; }
+    }
+
+    async function editIncome(id) {
+        try {
+            const res = await fetch(`/income/get/${id}`);
+            const data = await res.json();
+            if (data.success) {
+                const i = data.income;
+                document.getElementById('editIncId').value = i.id;
+                document.getElementById('editIncName').value = i.name;
+                document.getElementById('editIncRate').value = i.rate;
+                document.getElementById('editIncPenalty').value = i.penalty;
+                document.getElementById('editIncCondition').value = i.condition || '';
+                document.getElementById('editIncVat').checked = i.is_vat;
+                document.getElementById('editIncActive').checked = i.active;
+                new bootstrap.Modal(document.getElementById('editIncomeModal')).show();
+            }
+        } catch (e) { Swal.fire('Error', 'โหลดข้อมูลล้มเหลว', 'error'); }
+    }
+
+    async function handleUpdateIncome(event, form) {
+        event.preventDefault();
+        const id = document.getElementById('editIncId').value;
+        const btn = form.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/income/update/${id}`, { method: 'POST', body: new FormData(form) });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire({ icon: 'success', title: 'อัปเดตสำเร็จ!', timer: 1500, showConfirmButton: false }).then(() => window.location.reload());
+            } else {
+                Swal.fire('Error', result.message, 'error');
+                btn.disabled = false;
+            }
+        } catch (e) { Swal.fire('Error', 'เซิร์ฟเวอร์ขัดข้อง', 'error'); btn.disabled = false; }
+    }
+
+    function deleteIncome(id, name) {
+        Swal.fire({
+            title: 'ยืนยันการลบ?',
+            text: `ต้องการลบรายการ "${name}" ใช่หรือไม่?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ลบทิ้ง'
+        }).then(async (r) => {
+            if (r.isConfirmed) {
+                const res = await fetch(`/income/delete/${id}`, { method: 'POST' });
+                const result = await res.json();
+                if (result.success) {
+                    Swal.fire({ icon: 'success', title: 'ลบสำเร็จ!', timer: 1000, showConfirmButton: false }).then(() => window.location.reload());
+                } else {
+                    Swal.fire('Error', result.message, 'error');
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

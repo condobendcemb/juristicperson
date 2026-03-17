@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}จัดการใบแจ้งหนี้ - {{ juristic.name }}{% endblock %}
+{% block header %}จัดการใบแจ้งหนี้ (Invoices){% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm p-4 mb-4">
+            <h6 class="fw-bold mb-3"><i class="fas fa-magic me-2"></i>ประมวลผลออกใบแจ้งหนี้ (Batch Generation)</h6>
+            <form id="genInvoiceForm" class="row g-3 align-items-end" onsubmit="return handleGenerate(event, this)">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">เลือกประจำงวดที่ต้องการออกบิล</label>
+                    <div class="input-group">
+                        <select name="period" class="form-select" required>
+                            <option value="">-- เลือกงวดที่บันทึกไว้ --</option>
+                            <!-- งวดจากการบันทึกสถิติ (Record) -->
+                            {% for p in record_periods %}
+                            <option value="{{ p[0] }}">{{ p[0] }}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="input-group-text small">งวดที่</span>
+                        <input type="number" name="seq_no" class="form-control" value="1" min="1" style="max-width: 80px;">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm">
+                        <i class="fas fa-file-invoice me-2"></i>ประมวลผลออกบิล
+                    </button>
+                </div>
+            </form>
+            <div class="mt-2 text-muted xsmall">
+                <i class="fas fa-info-circle me-1"></i> ระบบจะสร้างใบแจ้งหนี้จากรายการที่บันทึกสถิติ (Record) ไว้ในงวดที่เลือกเฉพาะที่ยังไม่เคยออกบิล
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm p-4 mb-4">
+            <h6 class="fw-bold mb-3"><i class="fas fa-search me-2"></i>ตัวกรองและจัดการใบแจ้งหนี้ (Filter Invoices)</h6>
+            <form action="{{ url_for('invoice_manage') }}" method="GET" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">กรองตามงวด</label>
+                    <select name="period" class="form-select select-sm" onchange="this.form.submit()">
+                        <option value="">-- ทั้งหมด --</option>
+                        {% for p in periods %}
+                        <option value="{{ p }}" {% if sel_period == p %}selected{% endif %}>{{ p }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">งวดที่</label>
+                    <input type="number" name="seq_no" class="form-control" value="{{ sel_seq or '' }}" placeholder="ทั้งหมด" onchange="this.form.submit()">
+                </div>
+                <div class="col-md-2">
+                    <a href="{{ url_for('invoice_manage') }}" class="btn btn-outline-secondary w-100">ล้างค่า</a>
+                </div>
+                <div class="col-md-4 ms-auto text-end" id="bulkActions" class="d-none">
+                    <div class="input-group">
+                        <select id="paperSize" class="form-select form-select-sm">
+                            <option value="a4">Standard A4</option>
+                            <option value="a5-p">A5 Portrait</option>
+                            <option value="a5-l">A5 Landscape</option>
+                            <option value="cont-9-11">Cont. 9" x 11"</option>
+                            <option value="cont-95-11">Cont. 9.5" x 11"</option>
+                            <option value="cont-9-55">Cont. 9" x 5.5" (Half)</option>
+                        </select>
+                        <button type="button" class="btn btn-primary btn-sm shadow-sm" onclick="printSelected()">
+                            <i class="fas fa-print me-1"></i> พิมพ์ (<span id="selectedCount">0</span>)
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="card border-0 shadow-sm p-4">
+            <h6 class="mb-3 fw-bold"><i class="fas fa-list me-2"></i>รายการใบแจ้งหนี้ล่าสุด</h6>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" class="form-check-input" id="checkAll" onchange="toggleAll(this)">
+                            </th>
+                            <th>เลขที่บิล</th>
+                            <th>วันที่ออก</th>
+                            <th>งวด</th>
+                            <th>ห้อง</th>
+                            <th>ลูกค้า</th>
+                            <th class="text-end">ยอดรวม</th>
+                            <th>สถานะ</th>
+                            <th class="text-end">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in invoices %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="form-check-input inv-checkbox" value="{{ inv.id }}" onchange="updateBulkUI()">
+                            </td>
+                            <td class="fw-bold">INV-{{ "{:06d}".format(inv.id) }}</td>
+                            <td>{{ inv.date.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ inv.period }}{% if inv.seq_no %} (งวดที่ {{ inv.seq_no }}){% endif %}</td>
+                            <td>{{ inv.room.room_no }}</td>
+                            <td>{{ inv.customer.name if inv.customer else '-' }}</td>
+                            <td class="text-end fw-bold text-primary">{{ "{:,.2f}".format(inv.grand_total or 0) }}</td>
+                            <td>
+                                {% if inv.status == 'paid' %}
+                                <span class="badge bg-success">ชำระแล้ว</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">รอชำระ</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-info me-1" onclick="printSingle({{ inv.id }})">
+                                    <i class="fas fa-print"></i> พิมพ์
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteInvoice({{ inv.id }}, 'INV-{{ "{:06d}".format(inv.id) }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not invoices %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">ยังไม่มีรายการใบแจ้งหนี้</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    async function handleGenerate(event, form) {
+        event.preventDefault();
+        
+        Swal.fire({
+            title: 'กำลังออกใบแจ้งหนี้...',
+            text: 'กรุณารอสักครู่ ระบบกำลังประมวลผลข้อมูลรายห้อง',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        try {
+            const formData = new FormData(form);
+            const res = await fetch('/invoice/generate', { method: 'POST', body: formData });
+            const result = await res.json();
+
+            if (result.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'สำเร็จ!',
+                    text: result.message,
+                    confirmButtonText: 'ตกลง'
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Error', result.message, 'error');
+            }
+        } catch (e) {
+            Swal.fire('Error', 'เซิร์ฟเวอร์ขัดข้อง', 'error');
+        }
+    }
+
+    async function deleteInvoice(id, invNo) {
+        if (!await Swal.fire({
+            title: `ลบใบแจ้งหนี้ ${invNo}?`,
+            text: "หากลบแล้ว รายการบันทึกประจำงวดจะกลับไปเป็น 'ยังไม่ออกบิล' อีกครั้ง",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'ยืนยันการลบ',
+            cancelButtonText: 'ยกเลิก'
+        }).then(res => res.isConfirmed)) return;
+
+        try {
+            const res = await fetch(`/invoice/delete/${id}`, { method: 'POST' });
+            const result = await res.json();
+            if (result.success) {
+                location.reload();
+            } else {
+                Swal.fire('Error', result.message, 'error');
+            }
+        } catch (e) {
+            Swal.fire('Error', 'ไม่สามารถลบได้', 'error');
+        }
+    }
+
+    function toggleAll(el) {
+        const checked = el.checked;
+        document.querySelectorAll('.inv-checkbox').forEach(cb => cb.checked = checked);
+        updateBulkUI();
+    }
+
+    function updateBulkUI() {
+        const checked = document.querySelectorAll('.inv-checkbox:checked');
+        const bulk = document.getElementById('bulkActions');
+        const count = document.getElementById('selectedCount');
+        
+        if (checked.length > 0) {
+            bulk.classList.remove('d-none');
+            count.innerText = checked.length;
+        } else {
+            bulk.classList.add('d-none');
+        }
+    }
+
+    function printSelected() {
+        const checked = Array.from(document.querySelectorAll('.inv-checkbox:checked')).map(cb => cb.value);
+        if (checked.length === 0) return;
+        
+        const size = document.getElementById('paperSize').value;
+        const ids = checked.join(',');
+        window.open(`/invoice/print/bulk?ids=${ids}&size=${size}`, '_blank');
+    }
+
+    function printSingle(id) {
+        const size = document.getElementById('paperSize').value;
+        window.open(`/invoice/view/${id}?size=${size}`, '_blank');
+    }
+</script>
+{% endblock %}

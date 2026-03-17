@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ใบแจ้งหนี้ - INV-{{ "{:06d}".format(header.id) }}</title>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; font-size: 14px; margin: 0; padding: 0; line-height: 1.6; color: #333; background: #f4f7f6; }
+        
+        /* Paper Sizes */
+        .page { background: white; margin: 20px auto; padding: 10mm; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow: hidden; position: relative; }
+        
+        .size-a4 { width: 210mm; min-height: 297mm; }
+        .size-a5-p { width: 148mm; min-height: 210mm; }
+        .size-a5-l { width: 210mm; min-height: 148mm; }
+        .size-cont-9-11 { width: 9in; min-height: 11in; }
+        .size-cont-95-11 { width: 9.5in; min-height: 11in; }
+        .size-cont-9-55 { width: 9in; min-height: 5.5in; }
+
+        .header-table { width: 100%; margin-bottom: 20px; }
+        .header-table td { vertical-align: top; }
+        .title { color: #2c3e50; font-size: 28px; font-weight: bold; margin-bottom: 5px; }
+        .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .info-table td { border: 1px solid #eee; padding: 10px; }
+        .items-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .items-table th { background: #f8f9fa; border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 13px; }
+        .items-table td { border: 1px solid #ddd; padding: 8px; font-size: 13px; }
+        .text-end { text-align: right; }
+        .text-center { text-align: center; }
+        .total-row td { font-weight: bold; font-size: 15px; background: #fafafa; }
+        .footer { margin-top: 30px; }
+        .signatures { display: flex; justify-content: space-between; margin-top: 40px; }
+        .signature-box { border-top: 1px solid #333; width: 200px; text-align: center; padding-top: 10px; font-size: 12px; }
+        
+        @media print {
+            body { background: none; padding: 0; margin: 0; }
+            .page { margin: 0; box-shadow: none; padding: 5mm; }
+            .no-print { display: none; }
+            
+            {% if paper_size == 'a4' %} @page { size: A4; margin: 0; } {% endif %}
+            {% if paper_size == 'a5-p' %} @page { size: A5 portrait; margin: 0; } {% endif %}
+            {% if paper_size == 'a5-l' %} @page { size: A5 landscape; margin: 0; } {% endif %}
+            {% if paper_size == 'cont-9-11' %} @page { size: 9in 11in; margin: 0; } {% endif %}
+            {% if paper_size == 'cont-95-11' %} @page { size: 9.5in 11in; margin: 0; } {% endif %}
+            {% if paper_size == 'cont-9-55' %} @page { size: 9in 5.5in; margin: 0; } {% endif %}
+        }
+
+        /* Adjustments for small paper */
+        .size-a5-l .title, .size-cont-9-55 .title { font-size: 22px; }
+        .size-a5-l .page, .size-cont-9-55 .page { padding: 5mm; }
+        .size-a5-l .signatures, .size-cont-9-55 .signatures { margin-top: 20px; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="no-print" style="text-align: right; margin-bottom: 20px;">
+        <button onclick="window.print()" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            🖨️ พิมพ์เอกสาร
+        </button>
+    </div>
+
+    <div class="page size-{{ paper_size or 'a4' }}">
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="title">ใบแจ้งหนี้ / Invoice</div>
+                    <strong>{{ juristic.name }}</strong><br>
+                    เลขที่ผู้เสียภาษี: {{ juristic.tax_id or '-' }}<br>
+                    {{ juristic.address or '' }}
+                </td>
+                <td class="text-end">
+                    <div style="font-size: 18px; font-weight: bold;">เลขที่: INV-{{ "{:06d}".format(header.id) }}</div>
+                    วันที่ออก: {{ header.date.strftime('%d/%m/%Y') }}<br>
+                    งวด: {{ header.period }}{% if header.seq_no %} (งวดที่ {{ header.seq_no }}){% endif %}<br>
+                    ครบกำหนด: {{ header.duedate.strftime('%d/%m/%Y') }}
+                </td>
+            </tr>
+        </table>
+
+        <div style="background: #2c3e50; color: white; padding: 8px 15px; margin-bottom: 10px; font-weight: bold;">
+            ข้อมูลผู้ค้างชำระ / Customer Info
+        </div>
+        <table class="info-table">
+            <tr>
+                <td style="width: 50%;">
+                    <strong>ชื่อ-นามสุกล:</strong> {{ header.customer.name if header.customer else '-' }}<br>
+                    <strong>ที่อยู่:</strong> {{ header.customer.address if header.customer else '-' }}
+                </td>
+                <td>
+                    <strong>เลขห้อง:</strong> {{ header.room.room_no }}<br>
+                    <strong>ตึก:</strong> {{ header.room.building or '-' }} <strong>ชั้น:</strong> {{ header.room.floor or '-' }}
+                </td>
+            </tr>
+        </table>
+
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">ลำดับ</th>
+                    <th>รายการ</th>
+                    <th style="width: 100px;">จำนวนเงิน</th>
+                    <th style="width: 80px;">ภาษี (7%)</th>
+                    <th style="width: 120px;">ยอดรวม</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for detail in header.details %}
+                <tr>
+                    <td class="text-center">{{ loop.index }}</td>
+                    <td>
+                        {{ detail.item_name }}
+                        {% if detail.record %}<br><small style="color: #666;">(มิเตอร์: {{ detail.record.curr_unit }} - {{ detail.record.prev_unit }} = {{ detail.record.used_unit }})</small>{% endif %}
+                    </td>
+                    <td class="text-end">{{ "{:,.2f}".format(detail.amount) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(detail.vat_amount) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(detail.total_amount) }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td colspan="4" class="text-end">ยอดเงินรวมสุทธิ (Grand Total)</td>
+                    <td class="text-end">{{ "{:,.2f}".format(header.grand_total or 0) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 20px; font-weight: bold;">
+            ( {{ header.grand_total | format_thai_baht if header.grand_total else '' }} )
+        </div>
+
+        <div class="footer">
+            <div style="margin-bottom: 30px;">
+                * กรุณาชำระเงินภายในวันที่ระบุไว้ หากเกินกำหนดอาจมีค่าปรับตามระเบียบของนิติบุคคล
+            </div>
+            <div class="signatures">
+                <div>
+                    <br><br>
+                    <div class="signature-box">
+                        สำหรับผู้รับเงิน / Receiver
+                    </div>
+                </div>
+                <div>
+                    <br><br>
+                    <div class="signature-box">
+                        ในนาม {{ juristic.name }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

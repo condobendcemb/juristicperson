@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">รับชำระเงิน (Receipt Management)</h4>
+        <div class="d-flex align-items-center bg-white p-2 rounded shadow-sm">
+            <label class="small fw-bold me-2 mb-0">ขนาดพิมพ์:</label>
+            <select id="paperSize" class="form-select form-select-sm" style="width: auto;">
+                <option value="a4">Standard A4</option>
+                <option value="a5-p">A5 Portrait</option>
+                <option value="a5-l">A5 Landscape</option>
+                <option value="cont-9-11">Cont. 9" x 11"</option>
+                <option value="cont-95-11">Cont. 9.5" x 11"</option>
+                <option value="cont-9-55">Cont. 9" x 5.5" (Half)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- ฝั่งซ้าย: รับชำระใหม่ -->
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm p-4 mb-4">
+                <h6 class="fw-bold mb-3"><i class="fas fa-plus-circle me-2 text-primary"></i>บันทึกรับชำระใหม่</h6>
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">เลือกห้อง</label>
+                    <select id="roomSelect" class="form-select border-0 bg-light" onchange="loadUnpaidInvoices()">
+                        <option value="">-- เลือกห้อง --</option>
+                        {% for r in rooms %}
+                        <option value="{{ r.id }}">{{ r.room_no }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="unpaidArea" class="d-none">
+                    <label class="form-label small fw-bold text-danger">รายการค้างชำระ</label>
+                    <div class="list-group mb-3" id="unpaidList">
+                        <!-- Unpaid invoices list -->
+                    </div>
+
+                    <div class="bg-light p-3 rounded mb-3">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">วันที่รับชำระ</label>
+                            <input type="date" id="payDate" class="form-control border-0" value="{{ today_str }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">ช่องทางชำระ</label>
+                            <select id="payType" class="form-select border-0">
+                                <option value="cash">เงินสด</option>
+                                <option value="transfer">เงินโอน</option>
+                                <option value="cheque">เช็ค</option>
+                            </select>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label small fw-bold">ยอดเงินที่รับจริง</label>
+                            <input type="number" step="0.01" id="totalPay" class="form-control border-0 fw-bold text-primary fs-5" placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary w-100 py-2 shadow-sm" onclick="saveReceipt()">
+                        <i class="fas fa-check-circle me-2"></i>ยืนยันรับชำระเงิน
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ฝั่งขวา: ประวัติการรับชำระ -->
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm p-4">
+                <h6 class="fw-bold mb-3"><i class="fas fa-history me-2 text-muted"></i>ประวัติการรับชำระล่าสุด</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>เลขที่</th>
+                                <th>วันที่</th>
+                                <th>ห้อง (ลูกค้า)</th>
+                                <th class="text-end">ยอดเงิน</th>
+                                <th class="text-center">ประเภท</th>
+                                <th class="text-end">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receiptHistory">
+                            <!-- History items -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function loadUnpaidInvoices() {
+        const roomId = document.getElementById('roomSelect').value;
+        if (!roomId) {
+            document.getElementById('unpaidArea').classList.add('d-none');
+            return;
+        }
+
+        const res = await fetch(`/receipt/unpaid?room_id=${roomId}`);
+        const result = await res.json();
+        const list = document.getElementById('unpaidList');
+        list.innerHTML = '';
+
+        if (result.success && result.data.length > 0) {
+            let totalRemain = 0;
+            result.data.forEach(inv => {
+                totalRemain += inv.remain;
+                const item = document.createElement('div');
+                item.className = 'list-group-item d-flex justify-content-between align-items-center border-0 mb-1 rounded bg-white shadow-xs';
+                item.innerHTML = `
+                    <div>
+                        <div class="small fw-bold">งวด ${inv.period} (${inv.seq_no})</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">คงเหลือ: ${inv.remain.toLocaleString()} / บิล: ${inv.grand_total.toLocaleString()}</div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+            document.getElementById('totalPay').value = totalRemain;
+            document.getElementById('unpaidArea').classList.remove('d-none');
+        } else {
+            Swal.fire('Info', 'ไม่มียอดค้างชำระสำหรับห้องนี้', 'info');
+            document.getElementById('unpaidArea').classList.add('d-none');
+        }
+    }
+
+    async function saveReceipt() {
+        const roomId = document.getElementById('roomSelect').value;
+        const payDate = document.getElementById('payDate').value;
+        const payType = document.getElementById('payType').value;
+        const totalPay = document.getElementById('totalPay').value;
+
+        if (!totalPay || totalPay <= 0) {
+            Swal.fire('Error', 'กรุณาระบุยอดเงินให้ถูกต้อง', 'error');
+            return;
+        }
+
+        // เก็บรายละเอียดยอดที่จะจ่าย
+        const resUnpaid = await fetch(`/receipt/unpaid?room_id=${roomId}`);
+        const resultUnpaid = await resUnpaid.json();
+        const items = resultUnpaid.data.map(i => ({ ar_id: i.id }));
+
+        const confirm = await Swal.fire({
+            title: 'ยืนยันการรับชำระ?',
+            text: `ยอดเงิน ${parseFloat(totalPay).toLocaleString()} บาท`,
+            icon: 'question',
+            showCancelButton: true
+        });
+
+        if (confirm.isConfirmed) {
+            const res = await fetch('/receipt/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    room_id: roomId,
+                    pay_date: payDate,
+                    pay_type: payType,
+                    total_pay: totalPay,
+                    items: items
+                })
+            });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกสำเร็จ',
+                    text: result.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                loadReceiptHistory();
+                loadUnpaidInvoices();
+                const size = document.getElementById('paperSize').value;
+                window.open(`/receipt/print/${result.rc_id}?size=${size}`, '_blank');
+            } else {
+                Swal.fire('Error', result.message, 'error');
+            }
+        }
+    }
+
+    async function loadReceiptHistory() {
+        const res = await fetch('/receipt/list');
+        const result = await res.json();
+        const body = document.getElementById('receiptHistory');
+        body.innerHTML = '';
+
+        if (result.success) {
+            result.data.forEach(r => {
+                const tr = document.createElement('tr');
+                if (r.is_void) tr.classList.add('table-secondary', 'text-muted', 'text-decoration-line-through');
+                
+                const size = document.getElementById('paperSize').value;
+                tr.innerHTML = `
+                    <td class="fw-bold">${r.rc_no}</td>
+                    <td>${r.rc_date}</td>
+                    <td>${r.room_no} (${r.customer_name})</td>
+                    <td class="text-end fw-bold">${r.total_pay.toLocaleString()}</td>
+                    <td class="text-center">
+                        <span class="badge ${r.pay_type === 'cash' ? 'bg-success' : 'bg-info'}">${r.pay_type}</span>
+                    </td>
+                    <td class="text-end">
+                        <div class="btn-group btn-group-sm">
+                            <button onclick="printReceipt(${r.id})" class="btn btn-outline-primary"><i class="fas fa-print"></i></button>
+                            ${!r.is_void ? `<button class="btn btn-outline-danger" onclick="voidReceipt(${r.id}, '${r.rc_no}')"><i class="fas fa-ban"></i></button>` : ''}
+                        </div>
+                    </td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+    }
+
+    async function voidReceipt(id, no) {
+        const { value: reason } = await Swal.fire({
+            title: `ยกเลิกใบเสร็จ ${no}`,
+            input: 'text',
+            inputLabel: 'เหตุผลการยกเลิก',
+            inputPlaceholder: 'กรอกเหตุผล...',
+            showCancelButton: true
+        });
+
+        if (reason) {
+            const res = await fetch('/receipt/void', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id, reason: reason })
+            });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire('Voided!', result.message, 'success');
+                loadReceiptHistory();
+            } else {
+                Swal.fire('Error', result.message, 'error');
+            }
+        }
+    }
+
+    function printReceipt(id) {
+        const size = document.getElementById('paperSize').value;
+        window.open(`/receipt/print/${id}?size=${size}`, '_blank');
+    }
+
+    // Load history on start
+    loadReceiptHistory();
+</script>
+
+<style>
+    .shadow-xs { box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+</style>
+{% endblock %}

@@ -9,7 +9,51 @@
         <div class="card border-0 shadow-sm p-4">
             <h3>ยินดีต้อนรับ, {{ juristic.name }}</h3>
             <p class="text-muted">ตรวจสอบสถานะห้องพักล่าสุดของคุณได้ที่นี่</p>
-            
+
+            <div class="row">
+                {% if session.get('user_role') == 'admin' %}
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-4 text-center">
+                        <h4 class="text-primary"><i class="fas fa-door-open mb-2"></i><br>ห้องพัก</h4>
+                        <p class="text-muted small">จำนวนที่มีทั้งหมด</p>
+                        <h2>{{ rooms|length }}</h2>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-4 text-center">
+                        <h4 class="text-success"><i class="fas fa-users mb-2"></i><br>ผู้อยู่อาศัย</h4>
+                        <p class="text-muted small">จำนวนคนทั้งหมด</p>
+                        <h2>{{ customers|length }}</h2>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm p-4 text-center bg-primary text-white">
+                        <h4><i class="fas fa-door-closed mb-2"></i><br>ห้องของคุณ</h4>
+                        <p class="opacity-75">เลขห้องที่พักอาศัย</p>
+                        <h2 class="display-5 fw-bold">{% if rooms %}{{ rooms[0].room_no }}{% else %}ยังไม่มีข้อมูล{% endif %}</h2>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-4 text-center">
+                        <h4 class="text-warning"><i class="fas fa-file-invoice text-warning mb-2"></i><br>ใบแจ้งหนี้</h4>
+                        <p class="text-muted small">รอชำระ/ทั้งหมด</p>
+                        <h2>{{ ar_headers|length }}</h2>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-4 text-center">
+                        <h4 class="text-info"><i class="fas fa-receipt text-info mb-2"></i><br>ใบเสร็จ</h4>
+                        <p class="text-muted small">ชำระแล้วทั้งหมด</p>
+                        <h2>{{ rc_headers|length }}</h2>
+                    </div>
+                </div>
+            </div>
+
+
+
             <table class="table table-hover mt-4">
                 <thead class="table-light">
                     <tr>

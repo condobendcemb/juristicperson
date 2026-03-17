@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ใบเสร็จรับเงิน - {{ rc.rc_no }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; font-size: 14px; margin: 0; padding: 0; line-height: 1.6; color: #333; background: #f4f7f6; }
+        
+        /* Paper Sizes */
+        .page { background: white; margin: 20px auto; padding: 10mm; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow: hidden; position: relative; }
+        
+        .size-a4 { width: 210mm; min-height: 297mm; }
+        .size-a5-p { width: 148mm; min-height: 210mm; }
+        .size-a5-l { width: 210mm; min-height: 148mm; }
+        .size-cont-9-11 { width: 9in; min-height: 11in; }
+        .size-cont-95-11 { width: 9.5in; min-height: 11in; }
+        .size-cont-9-55 { width: 9in; min-height: 5.5in; }
+
+        .header-section { border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+        .juristic-name { font-size: 22px; font-weight: bold; color: #1a237e; }
+        .document-title { font-size: 24px; font-weight: bold; text-align: right; color: #1a237e; }
+        .info-label { font-weight: bold; width: 120px; display: inline-block; }
+        .table-items thead { background-color: #1a237e; color: white; }
+        .table-items th, .table-items td { border: 1px solid #dee2e6; padding: 10px; }
+        .footer-section { margin-top: 50px; }
+        .signature-box { border-bottom: 1px dotted #333; width: 200px; margin: 20px auto 10px; }
+        
+        @media print {
+            body { background: none; padding: 0; margin: 0; }
+            .page { margin: 0; box-shadow: none; padding: 5mm; }
+            .no-print { display: none; }
+            
+            {% if paper_size == 'a4' %} @page { size: A4; margin: 0; } {% endif %}
+            {% if paper_size == 'a5-p' %} @page { size: A5 portrait; margin: 0; } {% endif %}
+            {% if paper_size == 'a5-l' %} @page { size: A5 landscape; margin: 0; } {% endif %}
+            {% if paper_size == 'cont-9-11' %} @page { size: 9in 11in; margin: 0; } {% endif %}
+            {% if paper_size == 'cont-95-11' %} @page { size: 9.5in 11in; margin: 0; } {% endif %}
+            {% if paper_size == 'cont-9-55' %} @page { size: 9in 5.5in; margin: 0; } {% endif %}
+        }
+
+        /* Adjustments for small paper */
+        .size-a5-l .juristic-name, .size-cont-9-55 .juristic-name { font-size: 18px; }
+        .size-a5-l .document-title, .size-cont-9-55 .document-title { font-size: 18px; }
+        .size-a5-l .page, .size-cont-9-55 .page { padding: 5mm; }
+        .size-a5-l .footer-section, .size-cont-9-55 .footer-section { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="no-print text-center py-3">
+        <button class="btn btn-primary px-4" onclick="window.print()">
+            <i class="fas fa-print me-2"></i>พิมพ์ใบเสร็จรับเงิน
+        </button>
+    </div>
+
+    <div class="page size-{{ paper_size or 'a4' }}">
+        <div class="header-section">
+            <div class="row align-items-center">
+                <div class="col-7">
+                    <div class="juristic-name">{{ juristic.name }}</div>
+                    <div class="text-muted small mt-1">
+                        สำนักงานนิติบุคคลฯ บจก. พร็อพเพอร์ตี้ แมเนจเม้นท์<br>
+                        เลขประจำตัวผู้เสียภาษี: 0123456789012 (ตัวอย่าง)
+                    </div>
+                </div>
+                <div class="col-5">
+                    <div class="document-title">ใบเสร็จรับเงิน<br><small>(Receipt)</small></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-7">
+                <div class="mb-1"><span class="info-label">รับเงินจาก:</span> {{ rc.customer.name if rc.customer else 'Unknown' }}</div>
+                <div class="mb-1"><span class="info-label">ห้องเลขที่:</span> {{ pay_details[0].room_no if pay_details else '' }}</div>
+                <div class="mb-1"><span class="info-label">ที่อยู่:</span> {{ rc.customer.address if rc.customer and rc.customer.address else '-' }}</div>
+            </div>
+            <div class="col-5 text-end">
+                <div class="mb-1"><span class="info-label">เลขที่ใบเสร็จ:</span> <span class="fw-bold">{{ rc.rc_no }}</span></div>
+                <div class="mb-1"><span class="info-label">วันที่:</span> {{ rc.rc_date.strftime('%d/%m/%Y') }}</div>
+            </div>
+        </div>
+
+        <table class="table table-items w-100">
+            <thead>
+                <tr>
+                    <th class="text-center" style="width: 10%">ลำดับ</th>
+                    <th>รายการค้างชำระ</th>
+                    <th class="text-end" style="width: 25%">จำนวนเงิน (บาท)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in pay_details %}
+                <tr>
+                    <td class="text-center">{{ loop.index }}</td>
+                    <td>ชำระค่าใช้จ่ายประจำงวด {{ d.period }} (Sequence: {{ d.seq_no }})</td>
+                    <td class="text-end">{{ "{:,.2f}".format(d.amount) }}</td>
+                </tr>
+                {% endfor %}
+                <!-- Empty rows for spacing -->
+                {% for i in range(5 - pay_details|length) %}
+                <tr style="height: 40px;">
+                    <td></td><td></td><td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2" class="text-end fw-bold bg-light">รวมเงินทั้งสิ้น (Total Paid)</td>
+                    <td class="text-end fw-bold bg-light">{{ "{:,.2f}".format(rc.total_pay) }}</td>
+                </tr>
+                <tr>
+                    <td colspan="3" class="bg-light">
+                        <span class="info-label">ตัวอักษร:</span>
+                        <span class="fw-bold italic">({{ rc.total_pay | format_thai_baht }})</span>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="row mt-4 px-3 py-2 bg-light rounded bg-opacity-50">
+            <div class="col-12">
+                <span class="info-label">ชำระโดย:</span>
+                <span class="badge border border-dark text-dark px-3 py-1">
+                    {{ 'เงินสด' if rc.pay_type == 'cash' else 'เงินโอน' if rc.pay_type == 'transfer' else 'เช็ค' }}
+                </span>
+                {% if rc.pay_type == 'cheque' %}
+                <span class="ms-3 small">
+                    ธนาคาร: {{ rc.cheque_bank or '-' }} | เลขที่เช็ค: {{ rc.cheque_no or '-' }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="footer-section">
+            <div class="row text-center">
+                <div class="col-6">
+                    <div class="mt-5">
+                        <div class="signature-box"></div>
+                        <div>ผู้จ่ายเงิน</div>
+                        <div class="small text-muted">(Buyer)</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="mt-5">
+                        <div class="signature-box"></div>
+                        <div>ผู้รับเงิน / เจ้าหน้าที่</div>
+                        <div class="small text-muted">(Collector / Authorized Signature)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-5 text-center text-muted small border-top pt-3">
+            * ใบเสร็จรับเงินฉบับนี้จะสมบูรณ์ต่อเมื่อบริษัทฯ ได้รับเงินตามเช็คหรือเงินโอนเข้าบัญชีเรียบร้อยแล้ว *
+        </div>
+    </div>
+
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</body>
+</html>

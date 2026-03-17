@@ -1,0 +1,525 @@
+{% extends "base.html" %}
+
+{% block title %}จัดการห้องพัก - {{ juristic.name }}{% endblock %}
+{% block header %}จัดการข้อมูลห้องพัก{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0">รายการห้องทั้งหมดในนิติบุคคล: <span class="text-primary">{{ juristic.name }}</span>
+                </h5>
+                <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addRoomModal">
+                    <i class="fas fa-plus me-2"></i>เพิ่มห้องใหม่
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover mt-2 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ตึก (Building)</th>
+                            <th>ชั้น (Floor)</th>
+                            <th>เลขห้อง (Room No)</th>
+                            <th>ประเภทห้อง</th>
+                            <th>พื้นที่ (Sq.m.)</th>
+                            <th>อัตราส่วนฯ</th>
+                            <th>ผู้อยู่อาศัยปัจจุบัน</th>
+                            <th>สถานะการอยู่อาศัย</th>
+                            <th class="text-end">จัดการ</th>
+
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for room in rooms %}
+                        <tr>
+                            <td>{{ room.building or '-' }}</td>
+                            <td>{{ room.floor or '-' }}</td>
+                            <td class="fw-bold">{{ room.room_no }}</td>
+                            <td>{{ room.type or '-' }}</td>
+                            <td>{{ "{:,.2f}".format(room.sq_area or 0) }}</td>
+                            <td>{{ "{:.6f}".format(room.ratio or 0) }}</td>
+                            <td>
+                                {% set active_resident = room.residents|selectattr("active", "equalto", True)|first %}
+                                {% if active_resident %}
+                                    <span class="fw-bold text-dark">{{ active_resident.customer.name }}</span>
+                                    <br><small class="text-muted">({{ active_resident.residence_type }})</small>
+                                {% else %}
+                                    <span class="text-muted small">ไม่มีผู้อยู่อาศัย</span>
+                                {% endif %}
+                                <button class="btn btn-sm btn-link p-0 ms-1" onclick="manageResidents({{ room.id }}, '{{ room.room_no }}')">
+                                    <i class="fas fa-history"></i>
+                                </button>
+                            </td>
+                            <td>
+                                {% if room.status == 'ว่าง' %}
+                                <span class="badge bg-secondary">{{ room.status }}</span>
+                                {% else %}
+                                <span class="badge bg-success">{{ room.status or 'มีผู้อยู่อาศัย' }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary me-1"
+                                    onclick="editRoom({{ room.id }})">
+                                    <i class="fas fa-edit"></i> แก้ไข
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger"
+                                    onclick="deleteRoom({{ room.id }}, '{{ room.room_no }}')">
+                                    <i class="fas fa-trash"></i> ลบ
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">ยังไม่มีข้อมูลห้องพักในระบบ</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: มอบหมายผู้อยู่อาศัย -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">มอบหมายผู้อยู่อาศัย: ห้อง <span id="assignRoomNo"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="assignForm" onsubmit="return handleAssign(event)">
+                <input type="hidden" name="room_id" id="assignRoomId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-bold mb-0">เลือกสมาชิก / ผู้อยู่อาศัย</label>
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none" onclick="toggleQuickAdd()">
+                                <i class="fas fa-plus-circle me-1"></i>เพิ่มคนใหม่
+                            </button>
+                        </div>
+                        <select name="customer_id" id="customerSelect" class="form-select" required>
+                            <option value="">-- เลือกรายชื่อ --</option>
+                        </select>
+                    </div>
+
+                    <!-- Quick Add Form (Hidden by default) -->
+                    <div id="quickAddSection" class="bg-light p-3 rounded mb-3 d-none border">
+                        <h6 class="fw-bold small mb-3 text-primary">สร้างสมาชิกใหม่</h6>
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <input type="text" id="quickName" class="form-control form-control-sm" placeholder="ชื่อ-นามสกุล *">
+                            </div>
+                            <div class="col-12">
+                                <input type="email" id="quickEmail" class="form-control form-control-sm" placeholder="อีเมล *">
+                            </div>
+                            <div class="col-md-6">
+                                <input type="password" id="quickPass" class="form-control form-control-sm" placeholder="รหัสผ่าน">
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" id="quickPhone" class="form-control form-control-sm" placeholder="เบอร์โทร">
+                            </div>
+                            <div class="col-md-12 text-end">
+                                <button type="button" class="btn btn-sm btn-success w-100" onclick="handleQuickAddCustomer()">
+                                    <i class="fas fa-save me-1"></i>บันทึกและเลือกใช้งาน
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">ประเภทการอยู่อาศัย</label>
+                        <select name="residence_type" class="form-select">
+                            <option value="owner">เจ้าของห้อง (Owner)</option>
+                            <option value="tenant" selected>ผู้เช่า (Tenant)</option>
+                            <option value="other">อื่นๆ</option>
+                        </select>
+                    </div>
+                    
+                    <hr>
+                    <h6 class="fw-bold mb-2">ประวัติผู้อยู่อาศัย</h6>
+                    <div id="historyContainer" class="small text-muted">กำลังโหลด...</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
+                    <button type="submit" class="btn btn-primary">ยืนยันการมอบหมาย</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal เพิ่มห้อง -->
+<div class="modal fade" id="addRoomModal" tabindex="-1" aria-labelledby="addRoomModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addRoomModalLabel">เพิ่มห้องใหม่</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addRoomForm" action="/room/add" method="POST" onsubmit="return handleAddRoom(event, this)">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ตึก / อาคาร</label>
+                            <input type="text" name="building" class="form-control" placeholder="เช่น Building A">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ชั้น</label>
+                            <input type="text" name="floor" class="form-control" placeholder="เช่น ชั้น 12">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold text-primary">เลขห้อง <span
+                                    class="text-danger">*</span></label>
+                            <input type="text" name="room_no" class="form-control" required placeholder="เช่น 12/345">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">พื้นที่ (Sq.m.)</label>
+                            <input type="number" step="0.01" name="sq_area" class="form-control" placeholder="0.00">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">อัตราส่วนกรรมสิทธิ์</label>
+                            <input type="number" step="0.000001" name="ratio" class="form-control" placeholder="0.000000">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ค่าใช้จ่าย</label>
+                            <input type="text" name="expense" class="form-control" placeholder="เช่น 5000">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ยอดค้างชำระ</label>
+                            <input type="text" name="pending" class="form-control" placeholder="เช่น 5000">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ยอดเงินทั้งหมด</label>
+                            <input type="text" name="total" class="form-control" placeholder="เช่น 15000">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ประเภทห้อง</label>
+                            <input type="text" name="type" class="form-control" list="roomTypesList"
+                                placeholder="เลือกหรือพิมพ์ประเภทใหม่">
+                            <datalist id="roomTypesList">
+                                {% for t in types %}
+                                <option value="{{ t }}">
+                                    {% endfor %}
+                            </datalist>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">สถานะเริ่มต้น</label>
+                            <select name="status" class="form-select">
+                                <option value="ว่าง">ว่าง (Vacant)</option>
+                                <option value="มีผู้อยู่อาศัย" selected>มีผู้อยู่อาศัย (Occupied)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal แก้ไขห้อง -->
+<div class="modal fade" id="editRoomModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">แก้ไขข้อมูลห้อง</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editRoomForm" onsubmit="return handleUpdateRoom(event, this)">
+                <input type="hidden" name="room_id" id="editRoomId">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ตึก / อาคาร</label>
+                            <input type="text" name="building" id="editRoomBuilding" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ชั้น</label>
+                            <input type="text" name="floor" id="editRoomFloor" class="form-control">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold text-primary">เลขห้อง <span class="text-danger">*</span></label>
+                            <input type="text" name="room_no" id="editRoomNo" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">พื้นที่ (Sq.m.)</label>
+                            <input type="number" step="0.01" name="sq_area" id="editRoomArea" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">อัตราส่วนกรรมสิทธิ์</label>
+                            <input type="number" step="0.000001" name="ratio" id="editRoomRatio" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">ประเภทห้อง</label>
+                            <input type="text" name="type" id="editRoomType" class="form-control" list="roomTypesList">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">สถานะ</label>
+                            <select name="status" id="editRoomStatus" class="form-select">
+                                <option value="ว่าง">ว่าง (Vacant)</option>
+                                <option value="มีผู้อยู่อาศัย">มีผู้อยู่อาศัย (Occupied)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary">บันทึกการเปลี่ยนแปลง</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    async function editRoom(id) {
+        try {
+            const res = await fetch(`/room/get/${id}`);
+            const data = await res.json();
+            if (data.success) {
+                const r = data.room;
+                document.getElementById('editRoomId').value = r.id;
+                document.getElementById('editRoomBuilding').value = r.building || '';
+                document.getElementById('editRoomFloor').value = r.floor || '';
+                document.getElementById('editRoomNo').value = r.room_no;
+                document.getElementById('editRoomArea').value = r.sq_area || '';
+                document.getElementById('editRoomRatio').value = r.ratio || '';
+                document.getElementById('editRoomType').value = r.type || '';
+                document.getElementById('editRoomStatus').value = r.status || 'ว่าง';
+                
+                new bootstrap.Modal(document.getElementById('editRoomModal')).show();
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        } catch (e) {
+            Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลห้องได้', 'error');
+        }
+    }
+
+    async function handleUpdateRoom(event, form) {
+        event.preventDefault();
+        const id = document.getElementById('editRoomId').value;
+        const btn = form.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        
+        try {
+            const res = await fetch(`/room/update/${id}`, { method: 'POST', body: new FormData(form) });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire({ icon: 'success', title: 'สำเร็จ', timer: 1000, showConfirmButton: false }).then(() => window.location.reload());
+            } else {
+                Swal.fire('Error', result.message, 'error');
+                btn.disabled = false;
+            }
+        } catch (e) {
+            Swal.fire('Error', 'เซิร์ฟเวอร์ขัดข้อง', 'error');
+            btn.disabled = false;
+        }
+        return false;
+    }
+
+    async function handleAddRoom(event, form) {
+        event.preventDefault();
+        const btn = form.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form)
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                Swal.fire({
+                    icon: 'success', title: 'สำเร็จ!', text: result.message, timer: 1500, showConfirmButton: false
+                }).then(() => {
+                    window.location.reload();
+                });
+            } else {
+                Swal.fire({ icon: 'error', title: 'ข้อผิดพลาด', text: result.message });
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้' });
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+        return false;
+    }
+
+    function deleteRoom(roomId, roomNo) {
+        Swal.fire({
+            title: 'ยืนยันการลบห้อง?',
+            text: `คุณต้องการลบห้อง "${roomNo}" ใช่หรือไม่? ข้อมูลประวัติบิลอาจได้รับผลกระทบ!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'ลบทิ้งทันที',
+            cancelButtonText: 'ยกเลิก'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`/room/delete/${roomId}`, { method: 'POST' });
+                    const res = await response.json();
+
+                    if (res.success) {
+                        Swal.fire({
+                            icon: 'success', title: 'ลบสำเร็จ!', text: res.message, timer: 1500, showConfirmButton: false
+                        }).then(() => window.location.reload());
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                } catch (e) { Swal.fire('Error', 'เซิร์ฟเวอร์ขัดข้อง', 'error'); }
+            }
+        });
+    }
+
+    let customerData = [];
+
+    async function manageResidents(roomId, roomNo) {
+        document.getElementById('assignRoomId').value = roomId;
+        document.getElementById('assignRoomNo').innerText = roomNo;
+        
+        const modal = new bootstrap.Modal(document.getElementById('assignModal'));
+        modal.show();
+
+        // โหลดข้อมูล Customers ถ้ายังไม่มี
+        if (customerData.length === 0) {
+            try {
+                const res = await fetch('/customers_json');
+                customerData = await res.json();
+                const select = document.getElementById('customerSelect');
+                customerData.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.text = c.name;
+                    select.appendChild(opt);
+                });
+            } catch (e) { console.error('Load customers failed', e); }
+        }
+
+        loadHistory(roomId);
+    }
+
+    async function loadHistory(roomId) {
+        const container = document.getElementById('historyContainer');
+        container.innerHTML = 'กำลังโหลด...';
+        try {
+            const res = await fetch(`/room/history/${roomId}`);
+            const data = await res.json();
+            if (data.success && data.history.length > 0) {
+                let html = '<ul class="list-group list-group-flush">';
+                data.history.forEach(h => {
+                    html += `<li class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>${h.name}</strong>
+                            ${h.active ? '<span class="badge bg-success">ปัจจุบัน</span>' : '<span class="badge bg-light text-dark">ประวัติ</span>'}
+                        </div>
+                        <div class="text-muted" style="font-size: 0.8rem;">
+                            ประเภท: ${h.type} | เข้า: ${h.in} | ออก: ${h.out}
+                        </div>
+                    </li>`;
+                });
+                html += '</ul>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = 'ยังไม่มีประวัติการอยู่อาศัย';
+            }
+        } catch (e) { container.innerHTML = 'โหลดประวัติล้มเหลว'; }
+    }
+
+    async function handleAssign(event) {
+        event.preventDefault();
+        const form = event.target;
+        const btn = form.querySelector('button[type="submit"]');
+        btn.disabled = true;
+
+        try {
+            const formData = new FormData(form);
+            const res = await fetch('/room/assign_resident', { method: 'POST', body: formData });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire({ icon: 'success', title: 'สำเร็จ', timer: 1000, showConfirmButton: false }).then(() => window.location.reload());
+            } else {
+                Swal.fire('Error', result.message, 'error');
+                btn.disabled = false;
+            }
+        } catch (e) { 
+            Swal.fire('Error', 'เซิร์ฟเวอร์ขัดข้อง', 'error'); 
+            btn.disabled = false;
+        }
+    }
+
+    function toggleQuickAdd() {
+        const section = document.getElementById('quickAddSection');
+        section.classList.toggle('d-none');
+    }
+
+    async function handleQuickAddCustomer() {
+        const name = document.getElementById('quickName').value;
+        const email = document.getElementById('quickEmail').value;
+        const phone = document.getElementById('quickPhone').value;
+        const password = document.getElementById('quickPass').value;
+
+        if (!name || !email) {
+            Swal.fire('Warning', 'กรุณากรอกชื่อและอีเมล', 'warning');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('email', email);
+        formData.append('phone', phone);
+        formData.append('password', password);
+        formData.append('role', 'user'); // Default to resident/user
+
+        try {
+            const res = await fetch('/customer/add', { method: 'POST', body: formData });
+            const result = await res.json();
+            if (result.success) {
+                // รีโหลดรายชื่อโดยไม่ต้องรีเฟรชหน้า
+                const resList = await fetch('/customers_json');
+                customerData = await resList.json();
+                
+                const select = document.getElementById('customerSelect');
+                select.innerHTML = '<option value="">-- เลือกรายชื่อ --</option>';
+                customerData.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.text = c.name;
+                    select.appendChild(opt);
+                });
+
+                // ค้นหา ID ของคนที่เพิ่งเพิ่ม (ถ้า backend คืน ID มาจะง่ายกว่า แต่ตอนนี้เราหาจาก email)
+                // เพื่อความชัวร์ เราเลือกคนล่าสุดจาก List (หรือหาตัวที่ match email)
+                const newlyAdded = customerData.find(c => c.name === name); // หาง่ายๆ จากชื่อ
+                if (newlyAdded) select.value = newlyAdded.id;
+
+                toggleQuickAdd();
+                document.getElementById('quickName').value = '';
+                document.getElementById('quickEmail').value = '';
+                document.getElementById('quickPhone').value = '';
+                document.getElementById('quickPass').value = '';
+                
+                Swal.fire({ icon: 'success', title: 'เพิ่มสมาชิกสำเร็จ', timer: 1000, showConfirmButton: false });
+            } else {
+                Swal.fire('Error', result.message, 'error');
+            }
+        } catch (e) {
+            Swal.fire('Error', 'เซิร์ฟเวอร์ขัดข้อง', 'error');
+        }
+    }
+</script>
+{% endblock %}
