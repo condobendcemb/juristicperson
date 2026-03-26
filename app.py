@@ -12,6 +12,8 @@ from routes.income import income_bp
 from routes.record import record_bp
 from routes.billing import billing_bp
 from routes.customer import customer_bp
+import traceback
+from flask import jsonify
 
 app = Flask(__name__)
 
@@ -129,6 +131,25 @@ app.register_blueprint(income_bp)
 app.register_blueprint(record_bp)
 app.register_blueprint(billing_bp)
 app.register_blueprint(customer_bp)
+
+# --- Global Error Handler ---
+@app.errorhandler(500)
+def handle_500(e):
+    error_trace = traceback.format_exc()
+    return jsonify({
+        "success": False,
+        "message": "Internal Server Error (Global Handler)",
+        "error": str(e),
+        "traceback": error_trace
+    }), 500
+
+@app.errorhandler(400)
+def handle_400(e):
+    return jsonify({
+        "success": False,
+        "message": "Bad Request (e.g. CSRF Token missing/invalid)",
+        "error": str(e)
+    }), 400
 
 if __name__ == "__main__":
     with app.app_context():
