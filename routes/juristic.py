@@ -6,11 +6,24 @@ juristic_bp = Blueprint('juristic', __name__)
 @juristic_bp.route('/select-juristic')
 def select_juristic():
     if 'user_id' not in session: return redirect(url_for('auth.index'))
-    juristics = Juristic.query.all()
+    user_id = session.get('user_id')
+    user = Customer.query.get(user_id)
+    if not user: return redirect(url_for('auth.logout'))
+    
+    # ดึงเฉพาะรายการที่ User คนนี้มีสิทธิ์ (อ้างอิงจาก juristic_id ในตาราง Customer)
+    juristics = Juristic.query.filter_by(id=user.juristic_id).all()
     return render_template('select_juristic.html', juristics=juristics)
 
 @juristic_bp.route('/choose-project/<int:j_id>')
 def choose_project(j_id):
+    if 'user_id' not in session: return redirect(url_for('auth.index'))
+    user_id = session.get('user_id')
+    user = Customer.query.get(user_id)
+    
+    # ตรวจสอบสิทธิ์: ป้องกันการแอบใส่ ID โครงการอื่นที่ตนเองไม่มีสิทธิ์
+    if not user or user.juristic_id != j_id:
+        abort(403) # Forbidden
+        
     juristic = Juristic.query.get(j_id)
     if juristic:
         session['juristic_id'] = j_id
