@@ -398,7 +398,7 @@
         // โหลดข้อมูล Customers ถ้ายังไม่มี
         if (customerData.length === 0) {
             try {
-                const res = await fetch('/customers_json');
+                const res = await fetch('/room/get-customers');
                 customerData = await res.json();
                 const select = document.getElementById('customerSelect');
                 customerData.forEach(c => {
@@ -490,7 +490,7 @@
             const result = await res.json();
             if (result.success) {
                 // รีโหลดรายชื่อโดยไม่ต้องรีเฟรชหน้า
-                const resList = await fetch('/customers_json');
+                const resList = await fetch('/room/get-customers');
                 customerData = await resList.json();
                 
                 const select = document.getElementById('customerSelect');

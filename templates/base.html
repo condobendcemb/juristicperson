@@ -81,37 +81,37 @@
 
             <ul class="list-unstyled components">
                 <li class="active">
-                    <a href="{{ url_for('dashboard') }}"><i class="fas fa-home me-2"></i> หน้าหลัก (Dashboard)</a>
+                    <a href="{{ url_for('juristic.dashboard') }}"><i class="fas fa-home me-2"></i> หน้าหลัก (Dashboard)</a>
                 </li>
                 
                 {% if session.get('user_role') == 'admin' %}
                 <li>
-                    <a href="{{ url_for('list_rooms') }}"><i class="fas fa-door-open me-2"></i> จัดการห้องพัก</a>
+                    <a href="{{ url_for('room.list_rooms') }}"><i class="fas fa-door-open me-2"></i> จัดการห้องพัก</a>
                 </li>
                 <li>
-                    <a href="{{ url_for('customer') }}"><i class="fas fa-users me-2"></i> ผู้อยู่อาศัย</a>
+                    <a href="{{ url_for('customer.index') }}"><i class="fas fa-users me-2"></i> ผู้อยู่อาศัย</a>
                 </li>
 
                 <li>
-                    <a href="{{ url_for('income') }}"><i class="fas fa-file-invoice-dollar me-2"></i> ตั้งค่ารายได้</a>
+                    <a href="{{ url_for('income.index') }}"><i class="fas fa-file-invoice-dollar me-2"></i> ตั้งค่ารายได้</a>
                 </li>
                 <li>
-                    <a href="{{ url_for('record') }}"><i class="fas fa-edit me-2"></i> บันทึกรายการ (Meter)</a>
+                    <a href="{{ url_for('record.index') }}"><i class="fas fa-edit me-2"></i> บันทึกรายการ (Meter)</a>
                 </li>
                 <li>
-                    <a href="{{ url_for('invoice_manage') }}"><i class="fas fa-file-invoice me-2"></i> ใบแจ้งหนี้ (AR)</a>
+                    <a href="{{ url_for('billing.invoice_manage') }}"><i class="fas fa-file-invoice me-2"></i> ใบแจ้งหนี้ (AR)</a>
                 </li>
                 <li>
-                    <a href="{{ url_for('receipt_manage') }}"><i class="fas fa-file-invoice-dollar me-2"></i> ใบเสร็จรับเงิน (RC)</a>
+                    <a href="{{ url_for('billing.receipt_manage') }}"><i class="fas fa-file-invoice-dollar me-2"></i> ใบเสร็จรับเงิน (RC)</a>
                 </li>
                 <hr class="mx-3 my-2 border-secondary">
                 <li>
-                    <a href="{{ url_for('select_juristic') }}"><i class="fas fa-exchange-alt me-2"></i> สลับนิติบุคคล</a>
+                    <a href="{{ url_for('juristic.select_juristic') }}"><i class="fas fa-exchange-alt me-2"></i> สลับนิติบุคคล</a>
                 </li>
                 {% endif %}
 
                 <li>
-                    <a href="{{ url_for('logout') }}" class="text-danger"><i class="fas fa-sign-out-alt me-2"></i> ออกจากระบบ</a>
+                    <a href="{{ url_for('auth.logout') }}" class="text-danger"><i class="fas fa-sign-out-alt me-2"></i> ออกจากระบบ</a>
                 </li>
             </ul>
         </nav>
