@@ -7,3 +7,6 @@ gunicorn
 flask-limiter
 flask-wtf
 flask-talisman
+pyotp
+qrcode
+python-dotenv

@@ -128,24 +128,79 @@
                     <h5 class="modal-title fw-bold">ยืนยันตัวตนผู้จัดการ (KYC)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <p class="text-muted small mb-4">เพื่อความปลอดภัยสูงสุดและป้องกันบัญชีปลอม กรุณายืนยันข้อมูลจริงของท่าน</p>
-                    <form id="verify-identity-form" onsubmit="return handleVerifyIdentity(event, this)">
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">เลขบัตรประชาชน 13 หลัก</label>
-                            <input type="text" name="id_card" class="form-control" placeholder="x-xxxx-xxxxx-xx-x" maxlength="13" required>
+                <div class="modal-body p-0">
+                    <!-- Nav Tabs -->
+                    <ul class="nav nav-pills nav-fill mb-0 p-3 bg-light" id="kycTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active rounded-pill small fw-bold" data-bs-toggle="pill" data-bs-target="#tab-app" onclick="setupTotpUI()">
+                                <i class="fas fa-key me-1"></i> Authenticator
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link rounded-pill small fw-bold" data-bs-toggle="pill" data-bs-target="#tab-email">
+                                <i class="fas fa-envelope me-1"></i> Email OTP
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link rounded-pill small fw-bold" data-bs-toggle="pill" data-bs-target="#tab-id">
+                                <i class="fas fa-id-card me-1"></i> บัตรประชาชน
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content p-4">
+                        <!-- Tab: App Authenticator -->
+                        <div class="tab-pane fade show active text-center" id="tab-app">
+                            <p class="text-muted small mb-3">สแกน QR Code ด้วย Google/Microsoft Authenticator</p>
+                            <div id="qr-container" class="mb-3 d-none">
+                                <img id="qr-image" src="" class="img-fluid border p-2 bg-white shadow-sm" style="max-width: 180px;">
+                                <div class="mt-2 small font-monospace" id="secret-text"></div>
+                            </div>
+                            <div id="qr-loading" class="py-4">
+                                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                            </div>
+                            <form id="verify-totp-form" onsubmit="return handleVerifyTotp(event, this)">
+                                <div class="mb-3">
+                                    <input type="text" name="token" class="form-control text-center fs-4 fw-bold" placeholder="000000" maxlength="6" required>
+                                </div>
+                                <button type="submit" class="btn btn-dark w-100 rounded-pill">ยืนยันรหัส App</button>
+                            </form>
                         </div>
-                        <div class="mb-4">
-                            <label class="form-label small fw-bold">เบอร์โทรศัพท์มือถือ</label>
-                            <input type="tel" name="phone" class="form-control" placeholder="08x-xxx-xxxx" maxlength="10" required>
+
+                        <!-- Tab: Email OTP -->
+                        <div class="tab-pane fade text-center" id="tab-email">
+                            <p class="text-muted small mb-4">ระบบจะส่งรหัส 6 หลักไปที่ <strong>{{ user.email }}</strong></p>
+                            <div id="email-step-1">
+                                <button class="btn btn-outline-primary rounded-pill px-4" onclick="handleSendEmailOtp(this)">
+                                    <i class="fas fa-paper-plane me-2"></i> ส่งรหัส OTP
+                                </button>
+                            </div>
+                            <div id="email-step-2" class="d-none mt-3">
+                                <form id="verify-email-form" onsubmit="return handleVerifyEmailOtp(event, this)">
+                                    <div class="mb-3">
+                                        <input type="text" name="otp" class="form-control text-center fs-4 fw-bold" placeholder="xxxxxx" maxlength="6" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100 rounded-pill">ยืนยันรหัส Email</button>
+                                    <button type="button" class="btn btn-link btn-sm mt-2 text-decoration-none" onclick="document.getElementById('email-step-1').classList.remove('d-none'); document.getElementById('email-step-2').classList.add('d-none');">ส่งอีกครั้ง</button>
+                                </form>
+                            </div>
                         </div>
-                        <div class="bg-light p-3 rounded-3 mb-4 small text-muted">
-                            <i class="fas fa-info-circle me-1"></i> ข้อมูลนี้จะถูกเก็บเป็นความลับและใช้เพื่อระบุตัวตนทางกฎหมายเท่านั้น
+
+                        <!-- Tab: ID Card (Current Flow) -->
+                        <div class="tab-pane fade" id="tab-id">
+                            <form id="verify-identity-form" onsubmit="return handleVerifyIdentity(event, this)">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">เลขบัตรประชาชน 13 หลัก</label>
+                                    <input type="text" name="id_card" class="form-control" placeholder="x-xxxx-xxxxx-xx-x" maxlength="13" required>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label small fw-bold">เบอร์โทรศัพท์มือถือ</label>
+                                    <input type="tel" name="phone" class="form-control" placeholder="08x-xxx-xxxx" maxlength="10" required>
+                                </div>
+                                <button type="submit" class="btn btn-dark w-100 rounded-pill shadow-sm">ส่งข้อมูลยืนยันตัวตน</button>
+                            </form>
                         </div>
-                        <button type="submit" class="btn btn-dark btn-lg w-100 rounded-pill shadow-sm">
-                            ส่งข้อมูลยืนยันตัวตน
-                        </button>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -167,6 +222,72 @@
             }
             return originalFetch(resource, config);
         };
+
+        async function setupTotpUI() {
+            const container = document.getElementById('qr-container');
+            const loader = document.getElementById('qr-loading');
+            if (!container.classList.contains('d-none')) return;
+
+            try {
+                const res = await fetch('/setup-totp');
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('qr-image').src = 'data:image/png;base64,' + data.qr_code;
+                    document.getElementById('secret-text').innerText = 'Secret Key: ' + data.secret;
+                    loader.classList.add('d-none');
+                    container.classList.remove('d-none');
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function handleVerifyTotp(event, form) {
+            event.preventDefault();
+            const btn = form.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            try {
+                const res = await fetch('/verify-totp', { method: 'POST', body: new FormData(form) });
+                const data = await res.json();
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: data.message }).then(() => window.location.reload());
+                } else {
+                    Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: data.message });
+                    btn.disabled = false;
+                }
+            } catch (err) { btn.disabled = false; }
+            return false;
+        }
+
+        async function handleSendEmailOtp(btn) {
+            const originalText = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            try {
+                const res = await fetch('/send-email-otp', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    Swal.fire({ icon: 'info', title: 'ส่งรหัสแล้ว', text: data.message });
+                    document.getElementById('email-step-1').classList.add('d-none');
+                    document.getElementById('email-step-2').classList.remove('d-none');
+                }
+            } catch (err) { Swal.fire({ icon: 'error', title: 'Error', text: 'ส่งเมลล้มเหลว' }); }
+            btn.disabled = false; btn.innerHTML = originalText;
+        }
+
+        async function handleVerifyEmailOtp(event, form) {
+            event.preventDefault();
+            const btn = form.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            try {
+                const res = await fetch('/verify-email-otp', { method: 'POST', body: new FormData(form) });
+                const data = await res.json();
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: data.message }).then(() => window.location.reload());
+                } else {
+                    Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: data.message });
+                    btn.disabled = false;
+                }
+            } catch (err) { btn.disabled = false; }
+            return false;
+        }
 
         async function handleVerifyIdentity(event, form) {
             event.preventDefault();

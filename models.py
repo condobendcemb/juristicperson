@@ -72,6 +72,11 @@ class Customer(db.Model):
     verify_status = db.Column(db.String(20), default='unverified') # unverified, pending, verified
     verify_at = db.Column(db.DateTime, nullable=True)
     
+    # Advanced Verification (Email & TOTP)
+    is_email_verified = db.Column(db.Boolean, default=False)
+    email_otp = db.Column(db.String(10), nullable=True)
+    totp_secret = db.Column(db.String(100), nullable=True) # สำหรับ Authenticator App
+    
     create_by = db.Column(db.String(50), nullable=True)
     create_date = db.Column(db.DateTime, default=datetime.utcnow)
     update_by = db.Column(db.String(50), nullable=True)

@@ -4,6 +4,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db, limiter
 from models import Customer, Juristic, RoomResident, Room, JuristicAdminMapping
 from sqlalchemy.exc import IntegrityError
+import pyotp
+import qrcode
+import io
+import base64
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -169,6 +173,90 @@ def verify_identity():
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"})
+
+@auth_bp.route('/setup-totp', methods=['GET'])
+def setup_totp():
+    """สร้าง Secret Key และ QR Code สำหรับ Authenticator App"""
+    if 'user_id' not in session: return jsonify({"success": False})
+    
+    user = Customer.query.get(session['user_id'])
+    if not user.totp_secret:
+        user.totp_secret = pyotp.random_base32()
+        db.session.commit()
+
+    # สร้าง Provisioning URI
+    totp = pyotp.TOTP(user.totp_secret)
+    provisioning_uri = totp.provisioning_uri(name=user.email, issuer_name="JuristicSaaS")
+    
+    # สร้าง QR Code แบบ Base64
+    img = qrcode.make(provisioning_uri)
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    qr_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+    
+    return jsonify({
+        "success": True, 
+        "qr_code": qr_base64, 
+        "secret": user.totp_secret
+    })
+
+@auth_bp.route('/verify-totp', methods=['POST'])
+def verify_totp():
+    """ตรวจสอบความถูกต้องของรหัสจาก App"""
+    if 'user_id' not in session: return jsonify({"success": False})
+    
+    user = Customer.query.get(session['user_id'])
+    token = request.form.get('token')
+    
+    if not token: return jsonify({"success": False, "message": "กรุณากรอกรหัส 6 หลัก"})
+    
+    totp = pyotp.TOTP(user.totp_secret)
+    if totp.verify(token):
+        user.is_verified = True
+        user.verify_status = 'verified'
+        user.verify_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({"success": True, "message": "ยืนยันตัวตนผ่าน Authenticator สำเร็จ!"})
+    else:
+        return jsonify({"success": False, "message": "รหัสไม่ถูกต้องหรือหมดอายุ"})
+
+@auth_bp.route('/send-email-otp', methods=['POST'])
+def send_email_otp():
+    """จำลองการส่ง OTP ทาง Email"""
+    if 'user_id' not in session: return jsonify({"success": False})
+    
+    user = Customer.query.get(session['user_id'])
+    import random
+    otp = str(random.randint(100000, 999999))
+    user.email_otp = otp
+    db.session.commit()
+    
+    # ในระบบจริงจะส่งจริงผ่าน Flask-Mail
+    # print(f"--- [MOCK EMAIL] To: {user.email}, OTP: {otp} ---")
+    
+    return jsonify({
+        "success": True, 
+        "message": f"ส่งรหัส OTP ไปที่ {user.email} เรียบร้อยแล้ว (จำลอง: รหัสคือ {otp})",
+        "mock_otp": otp
+    })
+
+@auth_bp.route('/verify-email-otp', methods=['POST'])
+def verify_email_otp():
+    """ยืนยันรหัส OTP ทาง Email"""
+    if 'user_id' not in session: return jsonify({"success": False})
+    
+    user = Customer.query.get(session['user_id'])
+    otp_input = request.form.get('otp')
+    
+    if user.email_otp == otp_input:
+        user.is_email_verified = True
+        user.is_verified = True
+        user.verify_status = 'verified'
+        user.verify_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({"success": True, "message": "ยืนยันตัวตนทาง Email สำเร็จ!"})
+    else:
+        return jsonify({"success": False, "message": "รหัส OTP ไม่ถูกต้อง"})
 
 @auth_bp.route('/logout')
 def logout():
