@@ -84,6 +84,10 @@ def create_juristic():
     if not user or user.role != 'admin':
         return jsonify({"success": False, "message": "สิทธิ์ไม่เพียงพอ"})
 
+    # ตรวจสอบการยืนยันตัวตน (KYC)
+    if not user.is_verified:
+        return jsonify({"success": False, "message": "กรุณายืนยันตัวตนก่อนเพื่อเริ่มสร้างโครงการ (Security Check)"})
+
     juristic_name = request.form.get('juristic_name')
     if not juristic_name:
         return jsonify({"success": False, "message": "กรุณาระบุชื่อนิติบุคคล"})
@@ -133,6 +137,35 @@ def create_juristic():
     except IntegrityError:
         db.session.rollback()
         return jsonify({"success": False, "message": "อีเมลหรือชื่อนิติบุคคลนี้มีอยู่ในระบบแล้ว"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"})
+
+@auth_bp.route('/verify-identity', methods=['POST'])
+@limiter.limit("5 per hour")
+def verify_identity():
+    """จำลองระบบตรวจสอบตัวตน (Identity Verification)"""
+    if 'user_id' not in session: 
+        return jsonify({"success": False, "message": "กรุณาเข้าสู่ระบบก่อน"})
+    
+    user_id = session.get('user_id')
+    user = Customer.query.get(user_id)
+    id_card = request.form.get('id_card')
+    phone = request.form.get('phone')
+    
+    if not id_card or len(id_card) < 13:
+        return jsonify({"success": False, "message": "เลขบัตรประชาชนไม่ถูกต้อง"})
+    if not phone or len(phone) < 10:
+        return jsonify({"success": False, "message": "เบอร์โทรศัพท์ไม่ถูกต้อง"})
+
+    try:
+        user.idcard = id_card
+        user.phone = phone
+        user.verify_status = 'verified' 
+        user.is_verified = True
+        user.verify_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({"success": True, "message": "ยืนยันตัวตนเรียบร้อยแล้ว! ขอบคุณที่ร่วมสร้างสังคมที่ปลอดภัยครับ"})
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"})

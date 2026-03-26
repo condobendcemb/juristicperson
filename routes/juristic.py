@@ -18,7 +18,7 @@ def select_juristic():
     if not juristics and user.juristic_id:
         juristics = [Juristic.query.get(user.juristic_id)]
         
-    return render_template('select_juristic.html', juristics=juristics)
+    return render_template('select_juristic.html', juristics=juristics, user=user)
 
 @juristic_bp.route('/choose-project/<int:j_id>')
 def choose_project(j_id):

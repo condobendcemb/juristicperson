@@ -67,6 +67,11 @@ class Customer(db.Model):
     national = db.Column(db.String(50), nullable=True)
     active = db.Column(db.Boolean, default=True)
     
+    # Identity Verification (KYC)
+    is_verified = db.Column(db.Boolean, default=False)
+    verify_status = db.Column(db.String(20), default='unverified') # unverified, pending, verified
+    verify_at = db.Column(db.DateTime, nullable=True)
+    
     create_by = db.Column(db.String(50), nullable=True)
     create_date = db.Column(db.DateTime, default=datetime.utcnow)
     update_by = db.Column(db.String(50), nullable=True)
