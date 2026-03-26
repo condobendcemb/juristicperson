@@ -303,7 +303,15 @@
                         btn.innerHTML = originalText;
                     }
                 } else {
-                    Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: result.message });
+                    let errorMessage = result.message;
+                    if (result.traceback) {
+                        errorMessage += '<hr><p class="text-start small text-danger" style="max-height: 200px; overflow-y: auto; font-family: monospace;">' + result.traceback.replace(/\n/g, '<br>') + '</p>';
+                    }
+                    Swal.fire({ 
+                        icon: 'error', 
+                        title: 'ผิดพลาด', 
+                        html: errorMessage 
+                    });
                     btn.disabled = false;
                     btn.innerHTML = originalText;
                 }

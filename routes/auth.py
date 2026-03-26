@@ -122,11 +122,12 @@ def register():
         db.session.rollback()
         error_msg = str(e)
         error_trace = traceback.format_exc()
-        print(f"--- REGISTER ERROR ---\n{error_trace}\n----------------------")
+        # ส่ง Traceback กลับไปให้ Client ดูเลยจะได้แก้ถูก
         return jsonify({
             "success": False, 
-            "message": f"เกิดข้อผิดพลาด: {error_msg}. กรุณาตรวจสอบว่าติดตั้ง email-validator หรือยัง?",
-            "debug_error": error_msg
+            "message": f"เกิดข้อผิดพลาด: {error_msg}",
+            "debug_error": error_msg,
+            "traceback": error_trace
         })
 
 @auth_bp.route('/create-juristic', methods=['POST'])
