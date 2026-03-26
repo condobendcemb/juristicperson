@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db, limiter, mail
 from flask_mail import Message
 from email_validator import validate_email, EmailNotValidError
+import traceback
 from models import Customer, Juristic, RoomResident, Room, JuristicAdminMapping
 from sqlalchemy.exc import IntegrityError
 import pyotp
@@ -116,10 +117,17 @@ def register():
 
     except IntegrityError:
         db.session.rollback()
-        return jsonify({"success": False, "message": "อีเมลนี้มีอยู่ในระบบแล้ว"})
+        return jsonify({"success": False, "message": "อีเมลนี้มีอยู่ในระบบแล้ว (Duplicate Email)"})
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"})
+        error_msg = str(e)
+        error_trace = traceback.format_exc()
+        print(f"--- REGISTER ERROR ---\n{error_trace}\n----------------------")
+        return jsonify({
+            "success": False, 
+            "message": f"เกิดข้อผิดพลาด: {error_msg}. กรุณาตรวจสอบว่าติดตั้ง email-validator หรือยัง?",
+            "debug_error": error_msg
+        })
 
 @auth_bp.route('/create-juristic', methods=['POST'])
 @limiter.limit("5 per hour")

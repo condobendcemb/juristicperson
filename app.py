@@ -61,7 +61,7 @@ csp = {
     ],
     'img-src': ['\'self\'', 'data:', 'https:'],
     'font-src': ['\'self\'', 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com'],
-    'connect-src': '\'self\''
+    'connect-src': ['\'self\'', 'https://cdn.jsdelivr.net']
 }
 
 talisman = Talisman(
