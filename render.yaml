@@ -2,6 +2,7 @@ services:
   # Web Service for Juristic Person App
   - type: web
     name: juristic-app
+    plan: free
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: python init_db.py && gunicorn app:app

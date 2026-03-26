@@ -1,13 +1,8 @@
 #!/bin/sh
-echo "Waiting for database..."
-# Simple check for database readiness
-while ! nc -z db 5432; do
-  sleep 0.1
-done
-echo "Database started!"
+echo "Initializing Database..."
+# สร้างตารางถ้ายังไม่มี (เชื่อมกับ Supabase ตาม DATABASE_URL)
+python3 init_db.py
 
-# Create tables and seed data if not exists
-python init_db.py
-
-# Run Flask
-flask run --host=0.0.0.0
+echo "Starting Application on Port: ${PORT:-5000}"
+# รันแอปด้วย gunicorn และใช้พอร์ตตามที่ Render กำหนด ($PORT)
+gunicorn app:app --bind 0.0.0.0:${PORT:-5000}
