@@ -1,24 +1,6 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:15-alpine
-    container_name: juristic-db
-    environment:
-      - POSTGRES_DB=juristic_db
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin123
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d juristic_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   juristic-app:
     build: .
     container_name: juristicperson-web
@@ -28,21 +10,16 @@ services:
       - .:/app
     restart: always
     environment:
-      - DATABASE_URL=postgresql://admin:admin123@db:5432/juristic_db
+      # จะดึงค่าจากไฟล์ .env (Supabase)
+      - DATABASE_URL=${DATABASE_URL}
       - FLASK_APP=app.py
       - FLASK_DEBUG=1
       - SECRET_KEY=your-secret-key-here
-    depends_on:
-      db:
-        condition: service_healthy
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-
-volumes:
-  postgres_data:
 
 networks:
   default:

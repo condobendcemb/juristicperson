@@ -7,19 +7,10 @@ services:
     startCommand: python init_db.py && gunicorn app:app
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: juristic_db
-          property: connectionString
+        value: postgresql://postgres:Ben28122523!@db.sinskfbzszzuadgshxro.supabase.co:5432/postgres
       - key: SECRET_KEY
         generateValue: true
       - key: FLASK_APP
         value: app.py
       - key: FLASK_DEBUG
         value: "false"
-
-databases:
-  # Managed PostgreSQL Database
-  - name: juristic_db
-    databaseName: juristic_db
-    user: admincomp
-    plan: free # Change to starter for production
