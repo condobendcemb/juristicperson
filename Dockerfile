@@ -10,6 +10,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     build-essential \
+    postgresql-client \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # ติดตั้ง Python Library
@@ -19,5 +21,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # คัดลอกโค้ด
 COPY . .
 
-# สั่งรันด้วย Flask Run เพื่อรองรับ Hot Reload ในโหมด Debug
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+# ให้สิทธิ์รันสำหรับ start.sh
+RUN chmod +x start.sh
+
+# สั่งรันผ่านสคริปต์เริ่มต้น
+CMD ["sh", "start.sh"]

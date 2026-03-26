@@ -1,39 +1,46 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:15-alpine
+    container_name: juristic-db
+    environment:
+      - POSTGRES_DB=juristic_db
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d juristic_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   juristic-app:
     build: .
     container_name: juristicperson-web
-    # เลือก Port 5005 เพื่อไม่ให้ชนกับ bcondo (5000) และตัวอื่นๆ (5002)
     ports:
       - "5010:5000"
-
-    # [HOT RELOAD] เชื่อมไฟล์ในเครื่อง (F:\workspace\juristicperson) เข้าไปใน Container
     volumes:
       - .:/app
-
-    # [RUN ALWAYS] สั่งให้รันตลอดเวลา แม้เครื่องจะ Restart หรือแอป Crash
     restart: always
-
-    # docker-compose.yml ของโปรเจกต์ juristicperson
     environment:
-      # เปลี่ยน [USER] และ [PASSWORD] ให้ตรงกับของ condo_postgres
-      - DATABASE_URL=${DATABASE_URL}
-      # - DATABASE_URL=postgresql://postgres:[PASSWORD_จริง_ของคุณ]@host.docker.internal:5433/juristic_db
+      - DATABASE_URL=postgresql://admin:admin123@db:5432/juristic_db
       - FLASK_APP=app.py
       - FLASK_DEBUG=1
       - SECRET_KEY=your-secret-key-here
-
-    # จำกัด Log ไม่ให้บวมจนเต็ม Disk
+    depends_on:
+      db:
+        condition: service_healthy
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 
-    # อนุญาตให้คุยกับ localhost (Postgres) ของเครื่อง Host ได้
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+volumes:
+  postgres_data:
 
 networks:
   default:
