@@ -8,6 +8,11 @@ class Juristic(db.Model):
     subdomain = db.Column(db.String(50), unique=True, nullable=True)
     api_key = db.Column(db.String(100), nullable=True)
     
+    # Billing / SaaS Fields
+    status = db.Column(db.String(20), default='active') # active, expired, pending_payment
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    expiry_date = db.Column(db.DateTime, nullable=True) # วันหมดอายุ
+    
     # Relationships
     rooms = db.relationship('Room', backref='juristic', lazy=True)
     customers = db.relationship('Customer', backref='juristic', lazy=True)
@@ -45,7 +50,7 @@ class Room(db.Model):
 class Customer(db.Model):
     __tablename__ = 'customer'
     id = db.Column(db.Integer, primary_key=True)
-    juristic_id = db.Column(db.Integer, db.ForeignKey('juristic.id'), nullable=False)
+    juristic_id = db.Column(db.Integer, db.ForeignKey('juristic.id'), nullable=True) # ของเดิมเป็น False
     name = db.Column(db.String(150), nullable=False)
     username = db.Column(db.String(100), unique=True, nullable=True) # สำหรับ Login
     password_hash = db.Column(db.String(255), nullable=True)
@@ -71,6 +76,18 @@ class Customer(db.Model):
     ar_headers = db.relationship('ArHeader', backref='customer', lazy=True)
     rc_headers = db.relationship('RcHeader', backref='customer', lazy=True)
     room_history = db.relationship('RoomResident', backref='customer', lazy=True)
+
+class JuristicAdminMapping(db.Model):
+    """ตารางกลางเชื่อม Admin กับหลายนิติบุคคล (Many-to-Many)"""
+    __tablename__ = 'juristic_admin_mapping'
+    id = db.Column(db.Integer, primary_key=True)
+    juristic_id = db.Column(db.Integer, db.ForeignKey('juristic.id'), nullable=False)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False)
+    role = db.Column(db.String(20), default='admin') # สิทธิ์ในนิตินั้นๆ
+    
+    # Relationships สำหรับดึงข้อมูลสะดวกๆ
+    juristic_info = db.relationship('Juristic', backref='admin_links')
+    customer_info = db.relationship('Customer', backref='juristic_links')
 
 
 class RoomResident(db.Model):

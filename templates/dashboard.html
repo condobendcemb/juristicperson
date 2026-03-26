@@ -7,8 +7,19 @@
 <div class="row">
     <div class="col-md-12">
         <div class="card border-0 shadow-sm p-4">
-            <h3>ยินดีต้อนรับ, {{ juristic.name }}</h3>
-            <p class="text-muted">ตรวจสอบสถานะห้องพักล่าสุดของคุณได้ที่นี่</p>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h3 class="mb-0">ยินดีต้อนรับ, {{ juristic.name }}</h3>
+                    <p class="text-muted">ตรวจสอบสถานะโครงการและข้อมูลภาพรวมได้ที่นี่</p>
+                </div>
+                <div class="text-end">
+                    <span class="badge {% if juristic.status == 'active' %}bg-success{% elif juristic.status == 'pending_payment' %}bg-warning{% else %}bg-danger{% endif %} fs-6 mb-1">
+                        สถานะ: {{ 'เปิดใช้งาน' if juristic.status == 'active' else 'รอชำระเงิน' if juristic.status == 'pending_payment' else 'หมดอายุ' }}
+                    </span>
+                    <br>
+                    <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i> หมดอายุ: {{ juristic.expiry_date.strftime('%d/%m/%Y') if juristic.expiry_date else 'ยังไม่กำหนด' }}</small>
+                </div>
+            </div>
 
             <div class="row">
                 {% if session.get('user_role') == 'admin' %}

@@ -166,8 +166,8 @@
                     <p class="fs-5 opacity-75">จัดการโครงการแบบ Real-time ด้วยระบบ SaaS ที่มั่นคงที่สุด</p>
                 </div>
                 <div id="info-reg" class="hidden">
-                    <h1 class="display-4 fw-bold mb-3 text-warning">เปิดโครงการ<br>ใหม่วันนี้</h1>
-                    <p class="fs-5 opacity-75">รับฐานข้อมูลแยกส่วนเพื่อความปลอดภัยสูงสุดสำหรับนิติบุคคล</p>
+                    <h1 class="display-4 fw-bold mb-3 text-warning">สร้างบัญชี<br>ผู้จัดการ</h1>
+                    <p class="fs-5 opacity-75">สมัครสมาชิกเพียงครั้งเดียว เพื่อบริหารจัดการนิติบุคคลหลายโครงการผ่านบัญชีเดียว</p>
                 </div>
             </div>
         </div>
@@ -193,26 +193,23 @@
                 </div>
 
                 <div id="div-reg" class="form-content hidden">
-                    <h2 class="fw-bold mb-1 text-primary">ลงทะเบียนนิติบุคคล</h2>
-                    <p class="text-muted mb-4 small">สร้างฐานข้อมูลโครงการใหม่</p>
+                    <h2 class="fw-bold mb-1 text-primary">สมัครสมาชิก (Account)</h2>
+                    <p class="text-muted mb-4 small">สร้างบัญชีผู้ใช้งานเพื่อเริ่มต้นจัดการระบบ</p>
                     <form id="form-register" action="/register" method="POST" onsubmit="return handleFormSubmit(event, this)">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
-                            <label class="small fw-bold">ชื่อโครงการ / นิติบุคคล</label>
-                            <input type="text" name="juristic_name" class="form-control" placeholder="หมู่บ้าน..."
-                                required>
+                            <label class="small fw-bold">ชื่อ-นามสกุล ของท่าน</label>
+                            <input type="text" name="name" class="form-control" placeholder="ชื่อ นามสกุล" required>
                         </div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="small fw-bold text-primary">อีเมลผู้ดูแล</label>
-                                <input type="email" name="email" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="small fw-bold text-primary">รหัสผ่าน</label>
-                                <input type="password" name="password" class="form-control" minlength="4" required>
-                            </div>
+                        <div class="mb-3">
+                            <label class="small fw-bold text-primary">อีเมลสำหรับเข้าใช้งาน</label>
+                            <input type="email" name="email" class="form-control" placeholder="example@mail.com" required>
                         </div>
-                        <button type="submit" class="btn btn-success w-100 mt-4">สร้างโครงการ</button>
+                        <div class="mb-4">
+                            <label class="small fw-bold text-primary">กำหนดรหัสผ่าน</label>
+                            <input type="password" name="password" class="form-control" minlength="4" required>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 mt-2">สร้างบัญชีผู้ใช้งาน</button>
                         <p class="text-center mt-3 small mb-0"><a href="javascript:void(0)" onclick="toggleMode(false)"
                                 class="text-muted text-decoration-none"><i class="fas fa-arrow-left me-1"></i>
                                 กลับไปเข้าสู่ระบบ</a></p>

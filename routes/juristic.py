@@ -1,5 +1,5 @@
 from flask import Blueprint, request, session, redirect, url_for, jsonify, render_template, abort
-from models import db, Juristic, Room, Customer, RoomResident, Income, Record, ArHeader, RcHeader
+from models import db, Juristic, Room, Customer, RoomResident, Income, Record, ArHeader, RcHeader, JuristicAdminMapping
 
 juristic_bp = Blueprint('juristic', __name__)
 
@@ -10,8 +10,14 @@ def select_juristic():
     user = Customer.query.get(user_id)
     if not user: return redirect(url_for('auth.logout'))
     
-    # ดึงเฉพาะรายการที่ User คนนี้มีสิทธิ์ (อ้างอิงจาก juristic_id ในตาราง Customer)
-    juristics = Juristic.query.filter_by(id=user.juristic_id).all()
+    # ดึงโครงการที่ User คนนี้มีสิทธิ์ (จากตารางกลาง JuristicAdminMapping)
+    mappings = JuristicAdminMapping.query.filter_by(customer_id=user_id).all()
+    juristics = [m.juristic_info for m in mappings]
+    
+    # ถ้ายังไม่มีในตารางกลาง ให้ลองใช้ juristic_id หลักจากตาราง Customer (เพื่อรองรับข้อมูลเก่า)
+    if not juristics and user.juristic_id:
+        juristics = [Juristic.query.get(user.juristic_id)]
+        
     return render_template('select_juristic.html', juristics=juristics)
 
 @juristic_bp.route('/choose-project/<int:j_id>')
@@ -20,8 +26,11 @@ def choose_project(j_id):
     user_id = session.get('user_id')
     user = Customer.query.get(user_id)
     
-    # ตรวจสอบสิทธิ์: ป้องกันการแอบใส่ ID โครงการอื่นที่ตนเองไม่มีสิทธิ์
-    if not user or user.juristic_id != j_id:
+    # ตรวจสอบสิทธิ์จากตารางกลาง
+    mapping = JuristicAdminMapping.query.filter_by(customer_id=user_id, juristic_id=j_id).first()
+    
+    # ถ้าไม่มีในตารางกลาง ให้ลองเช็คจากคอลัมน์หลัก (เพื่อความยืดหยุ่น)
+    if not mapping and user.juristic_id != j_id:
         abort(403) # Forbidden
         
     juristic = Juristic.query.get(j_id)
