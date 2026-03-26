@@ -146,7 +146,7 @@ def register():
 @auth_bp.route('/create-juristic', methods=['POST'])
 @limiter.limit("5 per hour")
 def create_juristic():
-    """สร้างโครงการใหม่ (แรกฟรี / ตัวต่อไปจ่ายเงิน)"""
+    """สร้างโครงการใหม่ (แรกฟรี / ตัวต่อไปต้องชำระเงินก่อน)"""
     if 'user_id' not in session: 
         return jsonify({"success": False, "message": "กรุณาเข้าสู่ระบบก่อน"})
     
@@ -155,9 +155,9 @@ def create_juristic():
     if not user or user.role != 'admin':
         return jsonify({"success": False, "message": "สิทธิ์ไม่เพียงพอ"})
 
-    # ตรวจสอบการยืนยันตัวตน (KYC)
-    if not user.is_verified:
-        return jsonify({"success": False, "message": "กรุณายืนยันตัวตนก่อนเพื่อเริ่มสร้างโครงการ (Security Check)"})
+    # ปรับปรุง: ตรวจสอบแค่ว่ายืนยันอีเมลแล้วหรือยัง (ไม่ต้อง KYC ซ้ำซ้อนสำหรับโครงการแรก)
+    if not user.is_email_verified:
+        return jsonify({"success": False, "message": "กรุณายืนยันอีเมลของท่านก่อนเริ่มสร้างโครงการ"})
 
     juristic_name = request.form.get('juristic_name')
     if not juristic_name:
@@ -166,12 +166,10 @@ def create_juristic():
     # ตรวจสอบจำนวนนิติที่มีอยู่
     mapping_count = JuristicAdminMapping.query.filter_by(customer_id=user.id).count()
     
-    # เงื่อนไข: ถ้ามีอยู่แล้ว 1 ตัว ต้องมีระบบชำระเงินก่อน (ในที่นี้เราจำลองว่าต้องจ่ายเงิน)
+    # เงื่อนไขใหม่: ถ้ามีอยู่แล้วตั้งแต่ 1 โครงการขึ้นไป จะต้องชำระเงินก่อนถึงจะสร้างเพิ่มได้
     if mapping_count >= 1:
-        # TODO: ระบบชำระเงิน
-        # return jsonify({"success": False, "message": "คุณได้ใช้โควตาโครงการฟรีครบแล้ว กรุณาชำระเงินเพื่อเปิดโครงการเพิ่ม"})
-        # สำหรับช่วงทดสอบ ให้ผ่านไปก่อนแต่กำหนดสถานะเป็น 'pending_payment'
-        status = 'pending_payment'
+        # ในที่นี้เราจำลองว่าต้องจ่ายเงินก่อน (Stricter Check ตามที่ User ต้องการ)
+         return jsonify({"success": False, "message": "ท่านใช้งานโควตาโครงการฟรีครบแล้ว กรุณาชำระเงินเพื่อเปิดโครงการเพิ่มเติม"})
     else:
         status = 'active'
 
@@ -198,16 +196,6 @@ def create_juristic():
         msg = f"สร้างโครงการ {juristic_name} เรียบร้อยแล้ว (ใช้งานได้ถึง {new_juristic.expiry_date.strftime('%d/%m/%Y')})"
         return jsonify({"success": True, "message": msg, "redirect": url_for('juristic.select_juristic')})
 
-    except IntegrityError:
-        db.session.rollback()
-        return jsonify({"success": False, "message": "ชื่อนิติบุคคลนี้มีอยู่ในระบบแล้ว"})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"})
-
-    except IntegrityError:
-        db.session.rollback()
-        return jsonify({"success": False, "message": "อีเมลหรือชื่อนิติบุคคลนี้มีอยู่ในระบบแล้ว"})
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"})
