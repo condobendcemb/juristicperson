@@ -1,4 +1,4 @@
-from flask import Blueprint, request, session, redirect, url_for, jsonify, render_template
+from flask import Blueprint, request, session, redirect, url_for, jsonify, render_template, current_app
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db, limiter, mail
@@ -87,23 +87,34 @@ def register():
         db.session.add(admin_user)
         db.session.commit()
 
-        # ส่ง Email จริง
+        # ส่ง Email จริง (เฉพาะเมื่อมีการตั้งค่า SMTP)
         try:
+            # ตรวจสอบก่อนว่าตั้ง USERNAME ไว้หรือไม่ ถ้าไม่มีไม่ต้องฝืนส่ง (ลดโอกาส Timeout)
+            mail_configured = current_app.config.get('MAIL_USERNAME') is not None
+            
+            if not mail_configured:
+                return jsonify({
+                    "success": True, 
+                    "message": f"สมัครสมาชิกเบื้องต้นสำเร็จ! (ระบบไม่ได้ตั้งค่าอีเมล: รหัสรัดคือ {otp})",
+                    "step": "verify_otp",
+                    "email": email
+                })
+
             msg = Message(
                 "รหัสยืนยันการลงทะเบียน - JuristicSaaS",
                 recipients=[email]
             )
             msg.body = f"รหัสยืนยันของคุณคือ: {otp}\nกรุณานำรหัสนี้ไปกรอกในหน้าเว็บบอร์ดเพื่อยืนยันอีเมลครับ"
-            # ในระบบจริงจะใช้ mail.send(msg)
-            # ถ้ายังไม่มี SMTP จะ fallback ไปที่ print หรือจำลอง
+            
             try:
+                # พยายามส่งเมลแบบไม่ให้ค้างนาน 
+                # (บน Render หรือ Server ทั่วไปหากใช้เวลาเกิน 30s จะโดนตัวจัดการ Server Kill ทิ้ง)
                 mail.send(msg)
             except Exception as mail_err:
-                print(f"Mail send error: {mail_err}")
-                # สำหรับ Dev ถ้าส่งไม่ได้ให้บอก OTP ใน message (หรือเอาออกใน prod)
+                # ถ้าส่งเมลไม่ได้ (SMTP Error) ให้บอกโค้ดยืนยันเลย
                 return jsonify({
                     "success": True, 
-                    "message": f"สมัครสมาชิกเบื้องต้นสำเร็จ แต่ส่งอีเมลไม่ได้ (Dev: รหัสคือ {otp})",
+                    "message": f"สมัครสำหรับสำเร็จ แต่ระบบส่งเมลขัดข้อง (รหัสยืนยันคือ {otp})",
                     "step": "verify_otp",
                     "email": email
                 })
@@ -115,7 +126,7 @@ def register():
                 "email": email
             })
         except Exception as e:
-            return jsonify({"success": True, "message": f"สมัครสำเร็จ แต่ระบบส่งอีเมลขัดข้อง: {str(e)}", "step": "verify_otp", "email": email})
+            return jsonify({"success": True, "message": f"สมัครสำเร็จ แต่มีปัญหาชุดคำสั่งส่วนส่งเมล: {str(e)}", "step": "verify_otp", "email": email})
 
     except IntegrityError:
         db.session.rollback()
