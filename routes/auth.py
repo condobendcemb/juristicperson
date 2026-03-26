@@ -30,6 +30,8 @@ def login():
     
     if user and check_password_hash(user.password_hash, password):
         if not user.active:
+            if not user.is_email_verified:
+                return jsonify({"success": False, "message": "บัญชีนี้ยังไม่ได้ยืนยันอีเมล กรุณายืนยันรหัส OTP ที่ส่งไปให้ก่อนครับ"})
             return jsonify({"success": False, "message": "บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อนิติบุคคล"})
             
         session['user_id'] = user.id
@@ -59,10 +61,10 @@ def register():
         if not email or not password:
             return jsonify({"success": False, "message": "กรุณากรอกข้อมูลให้ครบถ้วน"})
 
-        # เช็ค email จริงเบื้องต้น (Deliverability check)
+        # เช็ค email จริงเบื้องต้น (Syntax check เท่านั้นเพื่อความเร็วและลดโอกาส Error)
         try:
-            # validate_email จะเช็คทั้ง syntax และ domain MX record
-            email_info = validate_email(email, check_deliverability=True)
+            # เปลี่ยน check_deliverability เป็น False เพื่อเลี่ยงปัญหา DNS บนบาง Server
+            email_info = validate_email(email, check_deliverability=False)
             email = email_info.normalized
         except EmailNotValidError as e:
             return jsonify({"success": False, "message": f"อีเมลไม่ถูกต้อง: {str(e)}"})
