@@ -215,6 +215,24 @@
                                 กลับไปเข้าสู่ระบบ</a></p>
                     </form>
                 </div>
+
+                <!-- OTP Verification Form -->
+                <div id="div-otp" class="form-content hidden">
+                    <h2 class="fw-bold mb-1 text-primary">ยืนยันรหัส OTP</h2>
+                    <p class="text-muted mb-4 small">กรุณากรอกรหัส 6 หลักที่ส่งไปยัง <span id="display-email" class="fw-bold text-dark"></span></p>
+                    <form id="form-otp" action="/register/verify-otp" method="POST" onsubmit="return handleFormSubmit(event, this)">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="email" id="otp-email-input">
+                        <div class="mb-4">
+                            <label class="small fw-bold">รหัส OTP 6 หลัก</label>
+                            <input type="text" name="otp" class="form-control text-center fs-3" placeholder="000000" maxlength="6" pattern="\d{6}" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 mt-2">ยืนยันรหัส OTP</button>
+                        <p class="text-center mt-3 small mb-0"><a href="javascript:void(0)" onclick="toggleMode(true)"
+                                class="text-muted text-decoration-none"><i class="fas fa-arrow-left me-1"></i>
+                                กลับไปที่หน้าสมัครสมาชิก</a></p>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -230,32 +248,55 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> กำลังดำเนินการ...';
 
             try {
+                const formData = new FormData(form);
                 const response = await fetch(form.action, {
                     method: 'POST',
-                    body: new FormData(form)
+                    body: formData
                 });
                 const result = await response.json();
 
                 if (result.success) {
-                    // ถ้าเป็น Login สำเร็จให้ไปหน้าเลือกนิติ
-                    if (form.id === 'form-login') {
+                    // ถ้ามี Step verify_otp (จากหน้า Register)
+                    if (result.step === 'verify_otp') {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'ยืนยันอีเมล',
+                            text: result.message,
+                        });
+                        
+                        // แสดงฟอร์ม OTP
+                        document.getElementById('display-email').innerText = result.email;
+                        document.getElementById('otp-email-input').value = result.email;
+                        
+                        document.getElementById('div-reg').classList.add('hidden');
+                        document.getElementById('div-otp').classList.remove('hidden');
+                        
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        return false;
+                    }
+
+                    // ถ้าเป็น Login หรือ OTP สำเร็จให้ไปหน้าถัดไป
+                    if (result.redirect) {
                         Swal.fire({
                             icon: 'success',
                             title: 'สำเร็จ',
-                            text: 'กำลังพาคุณไปหน้าเลือกนิติบุคคล...',
+                            text: result.message || 'กำลังพาคุณไปยังหน้าหลัก...',
                             timer: 1500,
                             showConfirmButton: false,
                             willClose: () => { window.location.href = result.redirect; }
                         });
+                    } else if (form.id === 'form-login') {
+                        // Fallback สำหรับ login เดิม
+                        window.location.href = result.redirect;
                     } else {
-                        // ถ้าเป็น Register สำเร็จ
                         Swal.fire({
                             icon: 'success',
-                            title: 'ลงทะเบียนสำเร็จ',
+                            title: 'สำเร็จ',
                             text: result.message,
                             confirmButtonText: 'ตกลง'
                         }).then(() => {
-                            toggleMode(false); // สลับกลับไปหน้า Login
+                            if (form.id === 'form-register') toggleMode(false);
                             form.reset();
                         });
                         btn.disabled = false;
@@ -267,12 +308,12 @@
                     btn.innerHTML = originalText;
                 }
             } catch (err) {
+                console.error(err);
                 Swal.fire({ icon: 'error', title: 'Error', text: 'การเชื่อมต่อขัดข้อง' });
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
 
-            // คืนค่า false เพื่อไม่ให้ Browser Refresh หน้า
             return false;
         }
 
@@ -282,6 +323,10 @@
             const infoReg = document.getElementById('info-reg');
             const divLogin = document.getElementById('div-login');
             const divReg = document.getElementById('div-reg');
+            const divOtp = document.getElementById('div-otp');
+
+            // รีเซ็ตการซ่อน OTP เสมอเมื่อเปลี่ยนโหมด
+            divOtp.classList.add('hidden');
 
             if (isRegister) {
                 mainScene.classList.add('register-mode');

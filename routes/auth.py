@@ -1,7 +1,9 @@
 from flask import Blueprint, request, session, redirect, url_for, jsonify, render_template
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
-from extensions import db, limiter
+from extensions import db, limiter, mail
+from flask_mail import Message
+from email_validator import validate_email, EmailNotValidError
 from models import Customer, Juristic, RoomResident, Room, JuristicAdminMapping
 from sqlalchemy.exc import IntegrityError
 import pyotp
@@ -56,18 +58,61 @@ def register():
         if not email or not password:
             return jsonify({"success": False, "message": "กรุณากรอกข้อมูลให้ครบถ้วน"})
 
-        # สร้าง User เปล่าๆ (ยังไม่ผูกกับนิติในขั้นตอนนี้)
+        # เช็ค email จริงเบื้องต้น (Deliverability check)
+        try:
+            # validate_email จะเช็คทั้ง syntax และ domain MX record
+            email_info = validate_email(email, check_deliverability=True)
+            email = email_info.normalized
+        except EmailNotValidError as e:
+            return jsonify({"success": False, "message": f"อีเมลไม่ถูกต้อง: {str(e)}"})
+
+        # สร้าง OTP
+        import random
+        otp = str(random.randint(100000, 999999))
+
+        # สร้าง User แบบยังไม่ยืนยัน
         admin_user = Customer(
             name=name,
             email=email,
             username=email,
             password_hash=generate_password_hash(password),
-            role='admin'
+            role='admin',
+            active=False,
+            is_email_verified=False,
+            email_otp=otp
         )
         db.session.add(admin_user)
         db.session.commit()
-        
-        return jsonify({"success": True, "message": "สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบเพื่อเริ่มสร้างนิติบุคคลของคุณ"})
+
+        # ส่ง Email จริง
+        try:
+            msg = Message(
+                "รหัสยืนยันการลงทะเบียน - JuristicSaaS",
+                recipients=[email]
+            )
+            msg.body = f"รหัสยืนยันของคุณคือ: {otp}\nกรุณานำรหัสนี้ไปกรอกในหน้าเว็บบอร์ดเพื่อยืนยันอีเมลครับ"
+            # ในระบบจริงจะใช้ mail.send(msg)
+            # ถ้ายังไม่มี SMTP จะ fallback ไปที่ print หรือจำลอง
+            try:
+                mail.send(msg)
+            except Exception as mail_err:
+                print(f"Mail send error: {mail_err}")
+                # สำหรับ Dev ถ้าส่งไม่ได้ให้บอก OTP ใน message (หรือเอาออกใน prod)
+                return jsonify({
+                    "success": True, 
+                    "message": f"สมัครสมาชิกเบื้องต้นสำเร็จ แต่ส่งอีเมลไม่ได้ (Dev: รหัสคือ {otp})",
+                    "step": "verify_otp",
+                    "email": email
+                })
+
+            return jsonify({
+                "success": True, 
+                "message": "ส่งรหัสยืนยันไปที่อีเมลของคุณแล้ว กรุณาตรวจสอบ",
+                "step": "verify_otp",
+                "email": email
+            })
+        except Exception as e:
+            return jsonify({"success": True, "message": f"สมัครสำเร็จ แต่ระบบส่งอีเมลขัดข้อง: {str(e)}", "step": "verify_otp", "email": email})
 
     except IntegrityError:
         db.session.rollback()
@@ -252,9 +297,35 @@ def verify_email_otp():
         user.is_email_verified = True
         user.is_verified = True
         user.verify_status = 'verified'
+        user.active = True # เปิดใช้งานบัญชี
         user.verify_at = datetime.utcnow()
         db.session.commit()
         return jsonify({"success": True, "message": "ยืนยันตัวตนทาง Email สำเร็จ!"})
+    else:
+        return jsonify({"success": False, "message": "รหัส OTP ไม่ถูกต้อง"})
+
+@auth_bp.route('/register/verify-otp', methods=['POST'])
+def register_verify_otp():
+    """ยืนยัน OTP สำหรับการลงทะเบียนครั้งแรก"""
+    email = request.form.get('email')
+    otp_input = request.form.get('otp')
+    
+    user = Customer.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"success": False, "message": "ไม่พบข้อมูลผู้ใช้"})
+        
+    if user.email_otp == otp_input:
+        user.is_email_verified = True
+        user.active = True
+        user.verify_at = datetime.utcnow()
+        db.session.commit()
+        
+        # ล็อกอินให้เลย
+        session['user_id'] = user.id
+        session['user_name'] = user.name
+        session['user_role'] = user.role
+        
+        return jsonify({"success": True, "message": "ยืนยันอีเมลสำเร็จและเข้าสู่ระบบแล้ว", "redirect": url_for('juristic.select_juristic')})
     else:
         return jsonify({"success": False, "message": "รหัส OTP ไม่ถูกต้อง"})
 

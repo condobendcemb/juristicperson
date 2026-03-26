@@ -10,3 +10,5 @@ flask-talisman
 pyotp
 qrcode
 python-dotenv
+flask-mail
+email-validator

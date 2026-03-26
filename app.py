@@ -1,7 +1,7 @@
 import os
 from flask import Flask, session
 from flask_talisman import Talisman
-from extensions import db, csrf, limiter
+from extensions import db, csrf, limiter, mail
 from models import db as _db # Keep it for db.init_app, but we'll use extensions.db
 
 # Import Blueprints
@@ -20,12 +20,23 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///jur
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-123')
 
+# Flask-Mail Configuration
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True') == 'True'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
 # --- Security Setup ---
 # 1. CSRF Protection
 csrf.init_app(app)
 
 # 2. Rate Limiting (Brute Force Protection)
 limiter.init_app(app)
+
+# 3. Mail initialization
+mail.init_app(app)
 
 # 3. Security Headers & CSP
 csp = {
