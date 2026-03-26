@@ -1,8 +1,5 @@
-# models.py
-from flask_sqlalchemy import SQLAlchemy
+from extensions import db
 from datetime import datetime
-
-db = SQLAlchemy()
 
 class Juristic(db.Model):
     __tablename__ = 'juristic'

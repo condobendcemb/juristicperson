@@ -1,6 +1,7 @@
 from flask import Blueprint, request, session, redirect, url_for, jsonify, render_template
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, Customer, Juristic, RoomResident, Room
+from extensions import db, limiter
+from models import Customer, Juristic, RoomResident, Room
 from sqlalchemy.exc import IntegrityError
 
 auth_bp = Blueprint('auth', __name__)
@@ -12,6 +13,7 @@ def index():
     return render_template('index.html')
 
 @auth_bp.route('/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     email = request.form.get('email')
     password = request.form.get('password')
@@ -38,6 +40,7 @@ def login():
     return jsonify({"success": False, "message": "อีเมลหรือรหัสผ่านไม่ถูกต้อง"})
 
 @auth_bp.route('/register', methods=['POST'])
+@limiter.limit("3 per hour")
 def register():
     try:
         juristic_name = request.form.get('juristic_name')

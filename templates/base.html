@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏢</text></svg>">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         body {
             font-family: 'Sarabun', sans-serif;
@@ -135,6 +136,29 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global Fetch Interceptor for CSRF Token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const originalFetch = window.fetch;
+        window.fetch = function() {
+            let [resource, config] = arguments;
+            if (config === undefined) config = {};
+            if (config.headers === undefined) config.headers = {};
+            
+            // Add CSRF Token for state-changing methods
+            const method = config.method ? config.method.toUpperCase() : 'GET';
+            if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+                if (!(config.body instanceof FormData)) {
+                    config.headers['X-CSRFToken'] = csrfToken;
+                } else {
+                    // For FormData, we can either append to body or use header. 
+                    // Flask-WTF supports X-CSRFToken header for FormData too.
+                    config.headers['X-CSRFToken'] = csrfToken;
+                }
+            }
+            return originalFetch(resource, config);
+        };
+    </script>
 </body>
 
 </html>

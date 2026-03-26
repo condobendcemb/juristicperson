@@ -3,4 +3,7 @@ flask-sqlalchemy
 psycopg2-binary
 htmx-flask
 flask-login
-gunicorn
+gunicorn
+flask-limiter
+flask-wtf
+flask-talisman

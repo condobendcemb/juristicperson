@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <style>
         :root {
@@ -176,6 +177,7 @@
                 <div id="div-login" class="form-content">
                     <h2 class="fw-bold mb-4">เข้าสู่ระบบ</h2>
                     <form id="form-login" action="/login" method="POST" onsubmit="return handleFormSubmit(event, this)">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label class="small fw-bold">อีเมลผู้ใช้งาน</label>
                             <input type="email" name="email" class="form-control" placeholder="admin@mail.com" required>
@@ -194,6 +196,7 @@
                     <h2 class="fw-bold mb-1 text-primary">ลงทะเบียนนิติบุคคล</h2>
                     <p class="text-muted mb-4 small">สร้างฐานข้อมูลโครงการใหม่</p>
                     <form id="form-register" action="/register" method="POST" onsubmit="return handleFormSubmit(event, this)">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label class="small fw-bold">ชื่อโครงการ / นิติบุคคล</label>
                             <input type="text" name="juristic_name" class="form-control" placeholder="หมู่บ้าน..."
@@ -300,6 +303,24 @@
                 divReg.classList.add('hidden');
                 setTimeout(() => divLogin.classList.remove('hidden'), 300);
             }
+        }
+    </script>
+    <script>
+        // Global Fetch Interceptor for CSRF Token in Index
+        const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+        if (csrfTokenMeta) {
+            const csrfToken = csrfTokenMeta.getAttribute('content');
+            const originalFetch = window.fetch;
+            window.fetch = function() {
+                let [resource, config] = arguments;
+                if (config === undefined) config = {};
+                if (config.headers === undefined) config.headers = {};
+                const method = config.method ? config.method.toUpperCase() : 'GET';
+                if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+                    config.headers['X-CSRFToken'] = csrfToken;
+                }
+                return originalFetch(resource, config);
+            };
         }
     </script>
 </body>

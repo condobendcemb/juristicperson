@@ -1,6 +1,8 @@
 import os
 from flask import Flask, session
-from models import db
+from flask_talisman import Talisman
+from extensions import db, csrf, limiter
+from models import db as _db # Keep it for db.init_app, but we'll use extensions.db
 
 # Import Blueprints
 from routes.auth import auth_bp
@@ -17,6 +19,50 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///juristic.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-123')
+
+# --- Security Setup ---
+# 1. CSRF Protection
+csrf.init_app(app)
+
+# 2. Rate Limiting (Brute Force Protection)
+limiter.init_app(app)
+
+# 3. Security Headers & CSP
+csp = {
+    'default-src': '\'self\'',
+    'base-uri': '\'self\'',
+    'object-src': '\'none\'',
+    'frame-ancestors': '\'none\'',
+    'form-action': '\'self\'',
+    'script-src': [
+        '\'self\'',
+        '\'unsafe-inline\'',
+        'https://*.googleapis.com',
+        'https://*.gstatic.com',
+        'https://cdn.jsdelivr.net'  # สำหรับ SweetAlert2 และ Bootstrap
+    ],
+    'style-src': [
+        '\'self\'',
+        '\'unsafe-inline\'',
+        'https://fonts.googleapis.com',
+        'https://cdn.jsdelivr.net',
+        'https://cdnjs.cloudflare.com'
+    ],
+    'img-src': ['\'self\'', 'data:', 'https:'],
+    'font-src': ['\'self\'', 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com'],
+    'connect-src': '\'self\''
+}
+
+talisman = Talisman(
+    app,
+    content_security_policy=csp,
+    force_https=False, # เปลี่ยนเป็น True เมื่อรันบน Production (Render จัดการ HTTPS ให้แล้ว)
+    strict_transport_security=True,
+    strict_transport_security_max_age=31536000,
+    frame_options='DENY',
+    session_cookie_secure=False, # เปลี่ยนเป็น True เมื่อใช้ HTTPS
+    session_cookie_http_only=True
+)
 
 db.init_app(app)
 
