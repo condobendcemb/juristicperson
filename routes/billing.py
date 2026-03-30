@@ -68,15 +68,23 @@ def generate_invoices():
             active_res = RoomResident.query.filter_by(room_id=room_id, active=True).first()
             customer_id = active_res.customer_id if active_res else None
             
+            total_amt = 0.0
+            for r in recs:
+                vat_amt = r.total_amt * 0.07 if r.income.is_vat else 0.0
+                total_amt += (r.total_amt + vat_amt)
+
+            if total_amt <= 0:
+                # ไม่สร้างใบแจ้งหนี้หากยอดรวมเป็น 0
+                continue
+            
             header = ArHeader(
                 juristic_id=j_id, room_id=room_id, customer_id=customer_id, date=today,
                 period=period, seq_no=seq_no, duedate=today + datetime.timedelta(days=15),
-                status='unpaid', amount=0.0, grand_total=0.0
+                status='unpaid', amount=total_amt, grand_total=total_amt
             )
             db.session.add(header)
             db.session.flush()
-            
-            total_amt = 0.0
+
             for r in recs:
                 vat_amt = r.total_amt * 0.07 if r.income.is_vat else 0.0
                 detail = ArDetail(
@@ -84,11 +92,8 @@ def generate_invoices():
                     amount=r.total_amt, vat_amount=vat_amt, total_amount=r.total_amt + vat_amt
                 )
                 db.session.add(detail)
-                total_amt += (r.total_amt + vat_amt)
                 r.is_billed = True
-                
-            header.amount = total_amt
-            header.grand_total = total_amt
+
             invoice_count += 1
             
         db.session.commit()
