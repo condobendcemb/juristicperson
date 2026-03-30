@@ -51,11 +51,24 @@
                             <i class="fas fa-building fa-2x"></i>
                         </div>
                         <h4 class="fw-bold mb-2">{{ j.name }}</h4>
-                        <p class="text-muted small mb-4">รหัสนิติบุคคล: #{{ j.id }}</p>
-                        <hr class="mb-4 opacity-50">
-                        <a href="{{ url_for('juristic.choose_project', j_id=j.id) }}" class="btn btn-primary btn-lg w-100 rounded-pill shadow-sm">
+                        <p class="text-muted small mb-2">รหัสนิติบุคคล: #{{ j.id }}</p>
+                        <p class="text-muted small mb-3">
+                            <i class="fas fa-door-open me-1"></i>{{ j.total_rooms or '?' }} ห้อง
+                            {% if j.status == 'active' %}
+                            <span class="badge bg-success ms-1">ใช้งาน</span>
+                            {% elif j.status == 'pending_payment' %}
+                            <span class="badge bg-warning text-dark ms-1">รอชำระเงิน</span>
+                            {% else %}
+                            <span class="badge bg-danger ms-1">หมดอายุ</span>
+                            {% endif %}
+                        </p>
+                        <hr class="mb-3 opacity-50">
+                        <a href="{{ url_for('juristic.choose_project', j_id=j.id) }}" class="btn btn-primary btn-lg w-100 rounded-pill shadow-sm mb-2">
                             เลือกจัดการนิตินี้ <i class="fas fa-arrow-right ms-2"></i>
                         </a>
+                        <button type="button" class="btn btn-outline-danger btn-sm w-100 rounded-pill" onclick="deleteProject({{ j.id }}, '{{ j.name }}')">
+                            <i class="fas fa-trash me-1"></i>ลบโครงการ
+                        </button>
                     </div>
                 </div>
             </div>
@@ -344,6 +357,39 @@
                 btn.innerHTML = originalText;
             }
             return false;
+        }
+
+        async function deleteProject(j_id, j_name) {
+            const result = await Swal.fire({
+                title: `ลบโครงการ: ${j_name}?`,
+                text: 'คำเตือน: การลบจะลบข้อมูลทั้งหมดของโครงการนี้ (ห้อง, บิล, ฯลฯ) ทั้งสิ้น',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'ลบโครงการนี้',
+                cancelButtonText: 'ยกเลิก'
+            });
+            
+            if (!result.isConfirmed) return;
+            
+            try {
+                const res = await fetch('/delete-juristic', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({ juristic_id: j_id })
+                });
+                
+                const data = await res.json();
+                if (data.success) {
+                    Swal.fire('ลบสำเร็จ!', data.message, 'success').then(() => {
+                        window.location.href = data.redirect;
+                    });
+                } else {
+                    Swal.fire('ผิดพลาด', data.message, 'error');
+                }
+            } catch (err) {
+                Swal.fire('ผิดพลาด', 'เซิร์ฟเวอร์ขัดข้อง', 'error');
+            }
         }
     </script>
 

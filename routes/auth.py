@@ -331,6 +331,52 @@ def verify_email_otp():
     else:
         return jsonify({"success": False, "message": "รหัส OTP ไม่ถูกต้อง"})
 
+@auth_bp.route('/delete-juristic', methods=['POST'])
+@limiter.limit("10 per hour")
+def delete_juristic():
+    """ลบโครงการ (Juristic)"""
+    if 'user_id' not in session:
+        return jsonify({"success": False, "message": "กรุณาเข้าสู่ระบบก่อน"})
+    
+    j_id = request.form.get('juristic_id', type=int)
+    if not j_id:
+        return jsonify({"success": False, "message": "กรุณาระบุโครงการ"})
+    
+    try:
+        user_id = session.get('user_id')
+        # ตรวจสอบว่าผู้ใช้เป็นเจ้าของโครงการนี้
+        mapping = JuristicAdminMapping.query.filter_by(juristic_id=j_id, customer_id=user_id).first()
+        if not mapping:
+            return jsonify({"success": False, "message": "คุณไม่มีสิทธิ์ลบโครงการนี้"})
+        
+        juristic = Juristic.query.get(j_id)
+        if not juristic:
+            return jsonify({"success": False, "message": "ไม่พบโครงการ"})
+        
+        juristic_name = juristic.name
+        
+        # ลบ mapping
+        db.session.delete(mapping)
+        
+        # ลบ juristic (CASCADE จะลบข้อมูลที่เกี่ยวข้องโดยอัตโนมัติ)
+        db.session.delete(juristic)
+        
+        # ลบ juristic_id จาก customer หากเป็น default
+        user = Customer.query.get(user_id)
+        if user.juristic_id == j_id:
+            user.juristic_id = None
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"ลบโครงการ {juristic_name} เรียบร้อยแล้ว",
+            "redirect": url_for('juristic.select_juristic')
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"})
+
 @auth_bp.route('/logout')
 def logout():
     session.clear()

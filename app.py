@@ -127,6 +127,25 @@ def format_thai_baht(number):
 
 app.jinja_env.filters['format_thai_baht'] = format_thai_baht
 
+# Jinja Filter: Format period to Thai
+def format_period(period_str):
+    """Convert '2024-01' to 'ปี 2024 เดือน มกราคม'"""
+    if not period_str:
+        return ''
+    try:
+        parts = str(period_str).split('-')
+        if len(parts) == 2:
+            year, month = int(parts[0]), int(parts[1])
+            months_th = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
+            month_name = months_th[month] if 1 <= month <= 12 else str(month)
+            return f'ปี {year} เดือน {month_name}'
+    except:
+        pass
+    return period_str
+
+app.jinja_env.filters['format_period'] = format_period
+
 # --- Register Blueprints ---
 app.register_blueprint(auth_bp)
 app.register_blueprint(juristic_bp)
