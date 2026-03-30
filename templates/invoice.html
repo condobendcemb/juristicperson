@@ -138,11 +138,15 @@
 <script>
     async function handleGenerate(event, form) {
         event.preventDefault();
-        
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+
         Swal.fire({
             title: 'กำลังออกใบแจ้งหนี้...',
-            text: 'กรุณารอสักครู่ ระบบกำลังประมวลผลข้อมูลรายห้อง',
+            text: 'กรุณารอสักครู่ ระบบกำลังประมวลผลข้อมูลรายห้อง (ห้ามปิดหน้าต่างก่อนจบ)',
             allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
             didOpen: () => { Swal.showLoading(); }
         });
 
@@ -156,14 +160,18 @@
                     icon: 'success',
                     title: 'สำเร็จ!',
                     text: result.message,
-                    confirmButtonText: 'ตกลง'
+                    confirmButtonText: 'ตกลง',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
                 }).then(() => {
                     location.reload();
                 });
             } else {
+                if (btn) btn.disabled = false;
                 Swal.fire('Error', result.message, 'error');
             }
         } catch (e) {
+            if (btn) btn.disabled = false;
             Swal.fire('Error', 'เซิร์ฟเวอร์ขัดข้อง', 'error');
         }
     }
