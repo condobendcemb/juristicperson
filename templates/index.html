@@ -234,10 +234,25 @@
                     method: 'POST',
                     body: new FormData(form)
                 });
-                const result = await response.json();
+
+                // ตรวจสอบ content-type ก่อน parse เพื่อไม่ให้แตกถ้า server ส่ง HTML กลับมา
+                let result;
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    result = await response.json();
+                } else {
+                    // Server ส่ง non-JSON (เช่น 429 HTML / 500) — สร้าง error object แทน
+                    const text = await response.text();
+                    result = {
+                        success: false,
+                        message: response.status === 429
+                            ? 'คำขอมากเกินไป กรุณารอสักครู่แล้วลองใหม่'
+                            : `เซิร์ฟเวอร์ขัดข้อง (${response.status})`
+                    };
+                    console.warn('Non-JSON response:', response.status, text.substring(0, 200));
+                }
 
                 if (result.success) {
-                    // ถ้าเป็น Login สำเร็จให้ไปหน้าเลือกนิติ
                     if (form.id === 'form-login') {
                         Swal.fire({
                             icon: 'success',
@@ -267,12 +282,12 @@
                     btn.innerHTML = originalText;
                 }
             } catch (err) {
-                Swal.fire({ icon: 'error', title: 'Error', text: 'การเชื่อมต่อขัดข้อง' });
+                console.error('handleFormSubmit error:', err);
+                Swal.fire({ icon: 'error', title: 'Error', text: 'การเชื่อมต่อขัดข้อง กรุณาลองใหม่' });
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
 
-            // คืนค่า false เพื่อไม่ให้ Browser Refresh หน้า
             return false;
         }
 

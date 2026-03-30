@@ -18,7 +18,7 @@ def index():
     return render_template('index.html')
 
 @auth_bp.route('/login', methods=['POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("10 per minute")
 def login():
     email = request.form.get('email')
     password = request.form.get('password')
@@ -45,7 +45,7 @@ def login():
     return jsonify({"success": False, "message": "อีเมลหรือรหัสผ่านไม่ถูกต้อง"})
 
 @auth_bp.route('/register', methods=['POST'])
-@limiter.limit("3 per hour")
+@limiter.limit("10 per hour")
 def register():
     """ลงทะเบียนเฉพาะบัญชีผู้ใช้งาน (User Account)"""
     try:

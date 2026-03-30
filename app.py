@@ -66,6 +66,23 @@ talisman = Talisman(
 
 db.init_app(app)
 
+# --- Error Handlers ---
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    """คืน JSON เสมอเมื่อโดน Rate Limit เพื่อไม่ให้ Frontend แตก"""
+    from flask import jsonify
+    return jsonify({
+        "success": False,
+        "message": f"คำขอมากเกินไป กรุณารอสักครู่แล้วลองใหม่ ({e.description})"
+    }), 429
+
+@app.errorhandler(400)
+def bad_request_handler(e):
+    from flask import jsonify, request as req
+    if req.accept_mimetypes.accept_json and not req.accept_mimetypes.accept_html:
+        return jsonify({"success": False, "message": str(e)}), 400
+    return e
+
 # --- Jinja Filters ---
 def format_thai_baht(number):
     if number is None: return ""
