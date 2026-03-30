@@ -34,7 +34,10 @@ def record_summary():
     if not period: return jsonify({"success": False})
     
     counts = db.session.query(Record.income_id, func.count(Record.id), func.sum(Record.total_amt))\
-        .filter(Record.juristic_id == j_id, Record.period == period, Record.seq_no == seq_no)\
+        .filter(Record.juristic_id == j_id, 
+                Record.period == period, 
+                Record.seq_no == seq_no,
+                Record.total_amt > 0\
         .group_by(Record.income_id).all()
     
     summary = []
