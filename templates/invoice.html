@@ -23,8 +23,9 @@
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold">วันที่ออกบิล</label>
-                    <input type="date" name="invoice_date" class="form-control" value="{{ today_str }}" required>
+                    <label class="form-label small fw-bold">วันที่ออกบิล (dd/mm/yyyy)</label>
+                    <input type="text" id="invoiceDate" name="invoice_date" class="form-control" value="{{ today_str.split('-')[2] }}/{{ today_str.split('-')[1] }}/{{ today_str.split('-')[0] }}" placeholder="dd/mm/yyyy" required>
+                    <div class="form-text">สามารถแก้ได้ตามต้องการ เช่น 30/03/2026</div>
                 </div>
                 <div class="col-md-3">
                     <button type="submit" class="btn btn-primary w-100 shadow-sm">

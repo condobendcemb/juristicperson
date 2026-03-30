@@ -31,8 +31,10 @@ def invoice_manage():
     ).distinct().order_by(Record.period.desc(), Record.seq_no.asc()).all()
     record_periods = [{'period': p, 'seq_no': s} for p, s in record_periods]
 
+    today_str = datetime.date.today().isoformat()  # yyyy-mm-dd
     return render_template('invoice.html', juristic=juristic, periods=periods, invoices=invoices, 
-                           sel_period=period_filter, sel_seq=seq_filter, record_periods=record_periods)
+                           sel_period=period_filter, sel_seq=seq_filter, record_periods=record_periods,
+                           today_str=today_str)
 
 @billing_bp.route('/invoice/generate', methods=['POST'])
 def generate_invoices():
@@ -48,9 +50,12 @@ def generate_invoices():
         return jsonify({"success": False, "message": "กรุณาเลือกวันที่ออกบิล"})
 
     try:
-        invoice_date = datetime.datetime.strptime(invoice_date_str, '%Y-%m-%d').date()
+        if '/' in invoice_date_str:
+            invoice_date = datetime.datetime.strptime(invoice_date_str, '%d/%m/%Y').date()
+        else:
+            invoice_date = datetime.datetime.strptime(invoice_date_str, '%Y-%m-%d').date()
     except ValueError:
-        return jsonify({"success": False, "message": "วันที่ออกบิลไม่ถูกต้อง"})
+        return jsonify({"success": False, "message": "วันที่ออกบิลไม่ถูกต้อง (ใช้ dd/mm/yyyy หรือ yyyy-mm-dd)"})
 
     if '|' in period_seq:
         period, seq_no = period_seq.split('|', 1)
