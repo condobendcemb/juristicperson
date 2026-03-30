@@ -195,25 +195,82 @@
                 <div id="div-reg" class="form-content hidden">
                     <h2 class="fw-bold mb-1 text-primary">สมัครสมาชิก (Account)</h2>
                     <p class="text-muted mb-4 small">สร้างบัญชีผู้ใช้งานเพื่อเริ่มต้นจัดการระบบ</p>
-                    <form id="form-register" action="/register" method="POST" onsubmit="return handleFormSubmit(event, this)">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <div class="mb-3">
-                            <label class="small fw-bold">ชื่อ-นามสกุล ของท่าน</label>
-                            <input type="text" name="name" class="form-control" placeholder="ชื่อ นามสกุล" required>
+                    
+                    <!-- Step 1: กรอกข้อมูล -->
+                    <div id="reg-step-1">
+                        <form id="form-register-step1" onsubmit="return handleRegisterStep1(event, this)">
+                            <div class="mb-3">
+                                <label class="small fw-bold">ชื่อ-นามสกุล ของท่าน</label>
+                                <input type="text" name="name" class="form-control" placeholder="ชื่อ นามสกุล" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small fw-bold text-primary">อีเมลสำหรับเข้าใช้งาน</label>
+                                <input type="email" name="email" class="form-control" placeholder="example@mail.com" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="small fw-bold text-primary">กำหนดรหัสผ่าน</label>
+                                <input type="password" name="password" class="form-control" minlength="4" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100 mt-2">ถัดไป: ยืนยันอีเมล</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Step 2: ยืนยัน OTP -->
+                    <div id="reg-step-2" class="d-none">
+                        <div class="text-center mb-4">
+                            <h5 class="fw-bold text-primary">ยืนยันอีเมล</h5>
+                            <p class="text-muted small">ส่งรหัส 6 หลักไปที่ <strong id="otp-email-display"></strong></p>
                         </div>
-                        <div class="mb-3">
-                            <label class="small fw-bold text-primary">อีเมลสำหรับเข้าใช้งาน</label>
-                            <input type="email" name="email" class="form-control" placeholder="example@mail.com" required>
+                        <div id="otp-step-send" class="mb-3">
+                            <button class="btn btn-outline-primary w-100" onclick="handleSendRegisterOtp()">
+                                <i class="fas fa-paper-plane me-2"></i> ส่งรหัส OTP
+                            </button>
                         </div>
-                        <div class="mb-4">
-                            <label class="small fw-bold text-primary">กำหนดรหัสผ่าน</label>
-                            <input type="password" name="password" class="form-control" minlength="4" required>
+                        <div id="otp-step-verify" class="d-none">
+                            <form id="form-verify-otp" onsubmit="return handleVerifyRegisterOtp(event, this)">
+                                <div class="mb-3">
+                                    <label class="small fw-bold">รหัส OTP 6 หลัก</label>
+                                    <input type="text" name="otp" class="form-control text-center fs-4 fw-bold" 
+                                           placeholder="000000" maxlength="6" required>
+                                </div>
+                                <button type="submit" class="btn btn-success w-100 mb-2">ยืนยันรหัส OTP</button>
+                                <button type="button" class="btn btn-link btn-sm w-100 text-decoration-none" 
+                                        onclick="handleSendRegisterOtp()">ส่งรหัสอีกครั้ง</button>
+                            </form>
                         </div>
-                        <button type="submit" class="btn btn-success w-100 mt-2">สร้างบัญชีผู้ใช้งาน</button>
-                        <p class="text-center mt-3 small mb-0"><a href="javascript:void(0)" onclick="toggleMode(false)"
-                                class="text-muted text-decoration-none"><i class="fas fa-arrow-left me-1"></i>
-                                กลับไปเข้าสู่ระบบ</a></p>
-                    </form>
+                        <div class="text-center mt-3">
+                            <button class="btn btn-link btn-sm text-muted" onclick="backToStep1()">
+                                <i class="fas fa-arrow-left me-1"></i> กลับไปแก้ไขข้อมูล
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 3: สมัครสมาชิก -->
+                    <div id="reg-step-3" class="d-none">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <h5 class="fw-bold text-success">อีเมลยืนยันแล้ว!</h5>
+                            <p class="text-muted small">คลิกปุ่มด้านล่างเพื่อสร้างบัญชีผู้ใช้งาน</p>
+                        </div>
+                        <form id="form-register-final" action="/register" method="POST" onsubmit="return handleFormSubmit(event, this)">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" id="final-name" name="name" value="">
+                            <input type="hidden" id="final-email" name="email" value="">
+                            <input type="hidden" id="final-password" name="password" value="">
+                            <button type="submit" class="btn btn-success w-100 mb-3">
+                                <i class="fas fa-user-plus me-2"></i> สร้างบัญชีผู้ใช้งาน
+                            </button>
+                        </form>
+                        <div class="text-center">
+                            <button class="btn btn-link btn-sm text-muted" onclick="resetRegistration()">
+                                <i class="fas fa-redo me-1"></i> เริ่มใหม่
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <p class="text-center mt-3 small mb-0"><a href="javascript:void(0)" onclick="toggleMode(false)"
+                            class="text-muted text-decoration-none"><i class="fas fa-arrow-left me-1"></i>
+                            กลับไปเข้าสู่ระบบ</a></p>
                 </div>
             </div>
         </div>
@@ -315,6 +372,135 @@
                 divReg.classList.add('hidden');
                 setTimeout(() => divLogin.classList.remove('hidden'), 300);
             }
+        }
+
+        // Registration Flow Functions
+        let regData = {};
+
+        async function handleRegisterStep1(event, form) {
+            event.preventDefault();
+            
+            const formData = new FormData(form);
+            regData = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                password: formData.get('password')
+            };
+            
+            // ไปขั้นตอนที่ 2
+            document.getElementById('reg-step-1').classList.add('d-none');
+            document.getElementById('reg-step-2').classList.remove('d-none');
+            document.getElementById('otp-email-display').textContent = regData.email;
+            
+            return false;
+        }
+
+        async function handleSendRegisterOtp() {
+            const btn = document.querySelector('#otp-step-send button');
+            const originalText = btn.innerHTML;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> กำลังส่ง...';
+            
+            try {
+                const response = await fetch('/send-register-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ email: regData.email })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'ส่ง OTP สำเร็จ',
+                        text: result.message,
+                        confirmButtonText: 'ตกลง'
+                    });
+                    
+                    // แสดงฟอร์มกรอก OTP
+                    document.getElementById('otp-step-send').classList.add('d-none');
+                    document.getElementById('otp-step-verify').classList.remove('d-none');
+                    
+                    // ใน development mode แสดง OTP ใน console
+                    if (result.mock_otp) {
+                        console.log('Mock OTP for development:', result.mock_otp);
+                    }
+                } else {
+                    Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: result.message });
+                }
+            } catch (err) {
+                console.error('Send OTP error:', err);
+                Swal.fire({ icon: 'error', title: 'Error', text: 'การเชื่อมต่อขัดข้อง' });
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+
+        async function handleVerifyRegisterOtp(event, form) {
+            event.preventDefault();
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> กำลังตรวจสอบ...';
+            
+            try {
+                const formData = new FormData(form);
+                formData.append('email', regData.email);
+                
+                const response = await fetch('/verify-register-otp', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // ไปขั้นตอนที่ 3
+                    document.getElementById('reg-step-2').classList.add('d-none');
+                    document.getElementById('reg-step-3').classList.remove('d-none');
+                    
+                    // เตรียมข้อมูลสำหรับส่งไป register
+                    document.getElementById('final-name').value = regData.name;
+                    document.getElementById('final-email').value = regData.email;
+                    document.getElementById('final-password').value = regData.password;
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'ยืนยันสำเร็จ',
+                        text: result.message,
+                        confirmButtonText: 'ตกลง'
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: result.message });
+                }
+            } catch (err) {
+                console.error('Verify OTP error:', err);
+                Swal.fire({ icon: 'error', title: 'Error', text: 'การเชื่อมต่อขัดข้อง' });
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            
+            return false;
+        }
+
+        function backToStep1() {
+            document.getElementById('reg-step-2').classList.add('d-none');
+            document.getElementById('reg-step-1').classList.remove('d-none');
+            document.getElementById('otp-step-send').classList.remove('d-none');
+            document.getElementById('otp-step-verify').classList.add('d-none');
+        }
+
+        function resetRegistration() {
+            regData = {};
+            document.getElementById('reg-step-3').classList.add('d-none');
+            document.getElementById('reg-step-1').classList.remove('d-none');
+            document.getElementById('form-register-step1').reset();
+            document.getElementById('form-verify-otp').reset();
         }
     </script>
     <script>

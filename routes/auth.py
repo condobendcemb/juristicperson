@@ -56,6 +56,10 @@ def register():
         if not email or not password:
             return jsonify({"success": False, "message": "กรุณากรอกข้อมูลให้ครบถ้วน"})
 
+        # ตรวจสอบว่าผ่านการ verify OTP แล้วหรือไม่
+        if not session.get('register_verified') or session.get('register_email') != email:
+            return jsonify({"success": False, "message": "กรุณายืนยันอีเมลก่อนสมัครสมาชิก"})
+
         # สร้าง User เปล่าๆ (ยังไม่ผูกกับนิติในขั้นตอนนี้)
         admin_user = Customer(
             name=name,
@@ -66,6 +70,11 @@ def register():
         )
         db.session.add(admin_user)
         db.session.commit()
+        
+        # ล้าง session หลังสมัครสำเร็จ
+        session.pop('register_verified', None)
+        session.pop('register_email', None)
+        session.pop('register_otp', None)
         
         return jsonify({"success": True, "message": "สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบเพื่อเริ่มสร้างนิติบุคคลของคุณ"})
 
@@ -169,6 +178,56 @@ def verify_identity():
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": f"เกิดข้อผิดพลาด: {str(e)}"})
+
+@auth_bp.route('/send-register-otp', methods=['POST'])
+@limiter.limit("5 per hour")
+def send_register_otp():
+    """ส่ง OTP สำหรับการสมัครสมาชิก"""
+    email = request.form.get('email')
+    
+    if not email:
+        return jsonify({"success": False, "message": "กรุณากรอกอีเมล"})
+    
+    # ตรวจสอบว่าอีเมลนี้มีในระบบแล้วหรือไม่
+    existing_user = Customer.query.filter_by(email=email).first()
+    if existing_user:
+        return jsonify({"success": False, "message": "อีเมลนี้มีอยู่ในระบบแล้ว"})
+    
+    import random
+    otp = str(random.randint(100000, 999999))
+    
+    # เก็บ OTP ใน session
+    session['register_otp'] = otp
+    session['register_email'] = email
+    
+    # ในระบบจริงจะส่งจริงผ่าน Flask-Mail
+    # print(f"--- [MOCK EMAIL] To: {email}, OTP: {otp} ---")
+    
+    return jsonify({
+        "success": True, 
+        "message": f"ส่งรหัส OTP ไปที่ {email} เรียบร้อยแล้ว (จำลอง: รหัสคือ {otp})",
+        "mock_otp": otp
+    })
+
+@auth_bp.route('/verify-register-otp', methods=['POST'])
+@limiter.limit("10 per hour")
+def verify_register_otp():
+    """ยืนยัน OTP สำหรับการสมัครสมาชิก"""
+    email = request.form.get('email')
+    otp_input = request.form.get('otp')
+    
+    if not email or not otp_input:
+        return jsonify({"success": False, "message": "กรุณากรอกข้อมูลให้ครบถ้วน"})
+    
+    # ตรวจสอบว่าตรงกับ session หรือไม่
+    if (session.get('register_email') != email or 
+        session.get('register_otp') != otp_input):
+        return jsonify({"success": False, "message": "รหัส OTP ไม่ถูกต้อง"})
+    
+    # ตั้งค่า verified ใน session
+    session['register_verified'] = True
+    
+    return jsonify({"success": True, "message": "ยืนยันอีเมลสำเร็จ! คุณสามารถสมัครสมาชิกได้แล้ว"})
 
 @auth_bp.route('/setup-totp', methods=['GET'])
 def setup_totp():
