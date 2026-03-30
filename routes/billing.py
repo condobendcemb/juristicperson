@@ -40,8 +40,17 @@ def generate_invoices():
     if not j_id: return jsonify({"success": False, "message": "Unauthorized"})
     
     period_seq = request.form.get('period_seq')
+    invoice_date_str = request.form.get('invoice_date')
     if not period_seq:
         return jsonify({"success": False, "message": "กรุณาเลือกงวดที่ต้องการออกบิล"})
+
+    if not invoice_date_str:
+        return jsonify({"success": False, "message": "กรุณาเลือกวันที่ออกบิล"})
+
+    try:
+        invoice_date = datetime.datetime.strptime(invoice_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({"success": False, "message": "วันที่ออกบิลไม่ถูกต้อง"})
 
     if '|' in period_seq:
         period, seq_no = period_seq.split('|', 1)
@@ -80,8 +89,8 @@ def generate_invoices():
                 continue
             
             header = ArHeader(
-                juristic_id=j_id, room_id=room_id, customer_id=customer_id, date=today,
-                period=period, seq_no=seq_no, duedate=today + datetime.timedelta(days=15),
+                juristic_id=j_id, room_id=room_id, customer_id=customer_id, date=invoice_date,
+                period=period, seq_no=seq_no, duedate=invoice_date + datetime.timedelta(days=15),
                 status='unpaid', amount=total_amt, grand_total=total_amt
             )
             db.session.add(header)

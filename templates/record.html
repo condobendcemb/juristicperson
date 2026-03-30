@@ -14,6 +14,16 @@
                 <hr class="my-2 opacity-25">
             </div>
             <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold">เลือกประเภทรายได้</label>
+                    <select id="incomeSelect" class="form-select">
+                        <option value="">-- เลือกรายการ --</option>
+                        {% for inc in incomes %}
+                        <option value="{{ inc.id }}">{{ inc.name }} ({{ inc.condition }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
                 <div class="col-md-3">
                     <label class="form-label small fw-bold">เลือกประจำงวด (Period)</label>
                     <div class="input-group">
@@ -27,15 +37,7 @@
                             style="max-width: 70px;">
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold">เลือกประเภทรายได้</label>
-                    <select id="incomeSelect" class="form-select">
-                        <option value="">-- เลือกรายการ --</option>
-                        {% for inc in incomes %}
-                        <option value="{{ inc.id }}">{{ inc.name }} ({{ inc.condition }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
+
                 <!-- <div class="col-md-2">
                     <button class="btn btn-primary w-100 shadow-sm" onclick="initRecords()">
                         <i class="fas fa-search me-2"></i>ดึงข้อมูล
@@ -131,7 +133,7 @@
                     <span class="badge bg-white text-dark border border-secondary-subtle me-1">
                         ${s.name}: <span class="text-primary fw-bold">${s.count} ห้อง</span> 
                         <span class="mx-1 text-muted">|</span> 
-                        <span class="text-success fw-bold">${s.total.toLocaleString(undefined, {minimumFractionDigits:2})} บ.</span>
+                        <span class="text-success fw-bold">${s.total.toLocaleString(undefined, { minimumFractionDigits: 2 })} บ.</span>
                     </span>
                 `).join('');
                 summaryArea.classList.remove('d-none');
@@ -186,7 +188,7 @@
                 lastState.seq = seq;
                 lastState.incomeId = incomeId;
 
-                autoCalculate(true); 
+                autoCalculate(true);
                 renderTable();
 
                 document.getElementById('displayIncome').innerText = document.getElementById('incomeSelect').options[document.getElementById('incomeSelect').selectedIndex].text;
@@ -272,7 +274,7 @@
 
             // ตรวจสอบความถูกต้อง: ถ้าน้อยกว่าเดิม และ ไม่ใช่ 0 (0 คืออนุญาตให้ข้ามได้)
             const isInvalid = (curr < prev && curr > 0);
-            
+
             if (isInvalid) {
                 inputCurr.classList.add('is-invalid');
             } else {
@@ -282,14 +284,14 @@
             // คำนวณหน่วยที่ใช้: ถ้าติดลบให้เป็น 0
             let used = curr - prev;
             if (used < 0) used = 0;
-            
+
             item.used_unit = used;
             item.total_amt = item.used_unit * (parseFloat(item.rate) || 0);
 
             const usedDisplay = document.getElementById(`used_${index}`);
             usedDisplay.innerText = used.toFixed(2);
             usedDisplay.className = isInvalid ? 'text-danger fw-bold' : '';
-            
+
             document.getElementById(`total_${index}`).value = item.total_amt.toFixed(2);
         } else if (field === 'rate' && (currentCondition === 'คูณพื้นที่' || currentCondition === 'คูณกรรมสิทธิ์' || currentCondition === 'คงที่')) {
             recalcTotal(index);
