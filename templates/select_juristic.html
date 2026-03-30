@@ -40,18 +40,6 @@
         <div class="text-center mb-5">
             <h1 class="fw-bold text-dark">ยินดีต้อนรับ, {{ user.name }}</h1>
             <p class="text-muted lead">กรุณาเลือกนิติบุคคลที่คุณต้องการเข้าจัดการข้อมูลในขณะนี้</p>
-            
-            {% if not user.is_verified %}
-            <div class="alert alert-warning border-0 shadow-sm rounded-4 d-inline-block px-4 py-3 mt-2">
-                <i class="fas fa-exclamation-shield me-2"></i>
-                บัญชีของคุณยังไม่ได้ยืนยันตัวตน <strong>กรุณายืนยันตัวตนก่อนสร้างโครงการใหม่</strong>
-                <button class="btn btn-warning btn-sm ms-3 rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#verifyIdentityModal">เริ่มยืนยันตัวตน</button>
-            </div>
-            {% else %}
-            <div class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2">
-                <i class="fas fa-check-circle me-1"></i> ยืนยันตัวตนเรียบร้อยแล้ว
-            </div>
-            {% endif %}
         </div>
 
         <div class="row g-4 justify-content-center">
@@ -74,15 +62,15 @@
             {% endfor %}
             
             <div class="col-md-6 col-lg-4">
-                <div class="card h-100 shadow-sm juristic-card p-4 text-center border-dashed border-2 {% if user.is_verified %}border-primary{% else %}border-secondary opacity-75{% endif %}" 
-                    data-bs-toggle="modal" data-bs-target="{% if user.is_verified %}#createJuristicModal{% else %}#verifyIdentityModal{% endif %}" 
-                    style="border-style: dashed; background: rgba(13, 110, 253, 0.05);">
+                <div class="card h-100 shadow-sm juristic-card p-4 text-center border-dashed border-2 border-primary" 
+                    data-bs-toggle="modal" data-bs-target="#createJuristicModal" 
+                    style="border-style: dashed; background: rgba(13, 110, 253, 0.05); cursor: pointer;">
                     <div class="card-body d-flex flex-column align-items-center justify-content-center">
                         <div class="icon-box bg-white shadow-sm">
-                            <i class="fas fa-{% if user.is_verified %}plus{% else %}shield-alt{% endif %} fa-2x"></i>
+                            <i class="fas fa-plus fa-2x"></i>
                         </div>
-                        <h4 class="fw-bold mb-2">{% if user.is_verified %}เพิ่มโครงการใหม่{% else %}ยืนยันตัวตนเพื่อสร้าง{% endif %}</h4>
-                        <p class="text-muted small mb-0">{% if user.is_verified %}เปิดโควตาบริหารจัดการนิติบุคคลเพิ่มเติม{% else %}ต้องยืนยันตัวตนบัตรประชาชนก่อนสร้างโครงการ{% endif %}</p>
+                        <h4 class="fw-bold mb-2">เพิ่มโครงการใหม่</h4>
+                        <p class="text-muted small mb-0">เปิดโควตาบริหารจัดการนิติบุคคลเพิ่มเติม</p>
                     </div>
                 </div>
             </div>

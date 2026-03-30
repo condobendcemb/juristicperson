@@ -88,10 +88,6 @@ def create_juristic():
     if not user or user.role != 'admin':
         return jsonify({"success": False, "message": "สิทธิ์ไม่เพียงพอ"})
 
-    # ตรวจสอบการยืนยันตัวตน (KYC)
-    if not user.is_verified:
-        return jsonify({"success": False, "message": "กรุณายืนยันตัวตนก่อนเพื่อเริ่มสร้างโครงการ (Security Check)"})
-
     juristic_name = request.form.get('juristic_name')
     if not juristic_name:
         return jsonify({"success": False, "message": "กรุณาระบุชื่อนิติบุคคล"})
