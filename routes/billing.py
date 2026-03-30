@@ -25,8 +25,11 @@ def invoice_manage():
         
     invoices = query.order_by(ArHeader.id.desc()).all()
     
-    record_periods = db.session.query(Record.period).filter(Record.juristic_id == j_id, Record.is_billed == False).distinct().order_by(Record.period.desc()).all()
-    record_periods = [p[0] for p in record_periods]
+    record_periods = db.session.query(Record.period, Record.seq_no).filter(
+        Record.juristic_id == j_id,
+        Record.is_billed == False
+    ).distinct().order_by(Record.period.desc(), Record.seq_no.asc()).all()
+    record_periods = [{'period': p, 'seq_no': s} for p, s in record_periods]
 
     return render_template('invoice.html', juristic=juristic, periods=periods, invoices=invoices, 
                            sel_period=period_filter, sel_seq=seq_filter, record_periods=record_periods)
@@ -36,10 +39,20 @@ def generate_invoices():
     j_id = session.get('juristic_id')
     if not j_id: return jsonify({"success": False, "message": "Unauthorized"})
     
-    period = request.form.get('period')
-    seq_no = request.form.get('seq_no', 1, type=int)
-    if not period: return jsonify({"success": False, "message": "กรุณาเลือกว่างวดไหน"})
-    
+    period_seq = request.form.get('period_seq')
+    if not period_seq:
+        return jsonify({"success": False, "message": "กรุณาเลือกงวดที่ต้องการออกบิล"})
+
+    if '|' in period_seq:
+        period, seq_no = period_seq.split('|', 1)
+        try:
+            seq_no = int(seq_no)
+        except ValueError:
+            return jsonify({"success": False, "message": "เลขที่งวดไม่ถูกต้อง"})
+    else:
+        period = period_seq
+        seq_no = request.form.get('seq_no', 1, type=int)
+
     try:
         records = Record.query.filter_by(juristic_id=j_id, period=period, seq_no=seq_no, is_billed=False).all()
         if not records:

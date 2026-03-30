@@ -11,17 +11,15 @@
             {% if record_periods %}
             <form id="genInvoiceForm" class="row g-3 align-items-end" onsubmit="return handleGenerate(event, this)">
                 <div class="col-md-4">
-                    <label class="form-label small fw-bold">เลือกประจำงวดที่ต้องการออกบิล</label>
+                    <label class="form-label small fw-bold">เลือกปี/เดือน/งวดที่ต้องการออกบิล</label>
                     <div class="input-group">
-                        <select name="period" class="form-select" required>
+                        <select name="period_seq" class="form-select" required>
                             <option value="">-- เลือกงวดที่บันทึกไว้ --</option>
                             <!-- งวดจากการบันทึกสถิติ (Record) -->
-                            {% for p in record_periods %}
-                            <option value="{{ p }}">{{ p }}</option>
+                            {% for item in record_periods %}
+                            <option value="{{ item.period }}|{{ item.seq_no }}">{{ item.period }} (งวดที่ {{ item.seq_no }})</option>
                             {% endfor %}
                         </select>
-                        <span class="input-group-text small">งวดที่</span>
-                        <input type="number" name="seq_no" class="form-control" value="1" min="1" style="max-width: 80px;">
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -32,11 +30,10 @@
             </form>
             {% else %}
             <div class="alert alert-info mb-0">
-                <i class="fas fa-info-circle me-2"></i>ไม่มีรายการบันทึกสถิติใหม่รอการออกบิล ทำการบันทึกรายการใหม่เพื่อออกบิล
-            </div>
+                <i class="fas fa-info-circle me-2"></i>ไม่มีรายการที่จะผ่านรายการ ต้องทำการบันทึกรายการใหม่ใน(เมนู บันทึกรายการแจ้งหนี้)          </div>
             {% endif %}
             <div class="mt-2 text-muted xsmall">
-                <i class="fas fa-info-circle me-1"></i> ระบบจะสร้างใบแจ้งหนี้จากรายการที่บันทึกสถิติ (Record) ไว้ในงวดที่เลือกเฉพาะที่ยังไม่เคยออกบิล
+                <i class="fas fa-info-circle me-1"></i> ระบบจะสร้างใบแจ้งหนี้จากรายการที่บันทึก(เมนู บันทึกรายการแจ้งหนี้) ไว้ในงวดที่เลือกเฉพาะที่ยังไม่เคยออกบิล
             </div>
         </div>
 
