@@ -25,7 +25,7 @@ def invoice_manage():
         
     invoices = query.order_by(ArHeader.id.desc()).all()
     
-    record_periods = db.session.query(Record.period).filter(Record.juristic_id == j_id).distinct().all()
+    record_periods = db.session.query(Record.period).filter(Record.juristic_id == j_id, Record.is_billed == False).distinct().order_by(Record.period.desc()).all()
     record_periods = [p[0] for p in record_periods]
 
     return render_template('invoice.html', juristic=juristic, periods=periods, invoices=invoices, 

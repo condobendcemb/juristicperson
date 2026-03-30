@@ -8,6 +8,7 @@
     <div class="col-md-12">
         <div class="card border-0 shadow-sm p-4 mb-4">
             <h6 class="fw-bold mb-3"><i class="fas fa-magic me-2"></i>ประมวลผลออกใบแจ้งหนี้ (Batch Generation)</h6>
+            {% if record_periods %}
             <form id="genInvoiceForm" class="row g-3 align-items-end" onsubmit="return handleGenerate(event, this)">
                 <div class="col-md-4">
                     <label class="form-label small fw-bold">เลือกประจำงวดที่ต้องการออกบิล</label>
@@ -29,6 +30,11 @@
                     </button>
                 </div>
             </form>
+            {% else %}
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle me-2"></i>ไม่มีรายการบันทึกสถิติใหม่รอการออกบิล ทำการบันทึกรายการใหม่เพื่อออกบิล
+            </div>
+            {% endif %}
             <div class="mt-2 text-muted xsmall">
                 <i class="fas fa-info-circle me-1"></i> ระบบจะสร้างใบแจ้งหนี้จากรายการที่บันทึกสถิติ (Record) ไว้ในงวดที่เลือกเฉพาะที่ยังไม่เคยออกบิล
             </div>
