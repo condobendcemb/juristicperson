@@ -37,7 +37,7 @@ def record_summary():
         .filter(Record.juristic_id == j_id, 
                 Record.period == period, 
                 Record.seq_no == seq_no,
-                Record.total_amt > 0\
+                Record.total_amt > 0)\
         .group_by(Record.income_id).all()
     
     summary = []
