@@ -99,10 +99,10 @@
                 <li class="{% if current_module == 'record' %}active{% endif %}">
                     <a href="{{ url_for('record.index') }}"><i class="fas fa-edit me-2"></i> บันทึกรายการแจ้งหนี้</a>
                 </li>
-                <li class="{% if current_module == 'billing' %}active{% endif %}">
+                <li class="{% if current_endpoint and current_endpoint.startswith('billing.invoice') %}active{% endif %}">
                     <a href="{{ url_for('billing.invoice_manage') }}"><i class="fas fa-file-invoice me-2"></i> ใบแจ้งหนี้ (AR)</a>
                 </li>
-                <li class="{% if current_module == 'billing' %}active{% endif %}">
+                <li class="{% if current_endpoint and current_endpoint.startswith('billing.receipt') %}active{% endif %}">
                     <a href="{{ url_for('billing.receipt_manage') }}"><i class="fas fa-file-invoice-dollar me-2"></i> ใบเสร็จรับเงิน (RC)</a>
                 </li>
                 <hr class="mx-3 my-2 border-secondary">
