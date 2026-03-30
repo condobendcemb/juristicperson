@@ -146,17 +146,18 @@ def format_period(period_str):
 
 app.jinja_env.filters['format_period'] = format_period
 
-# Jinja Filter: Check if current endpoint is active
-def is_active_menu(endpoint_name):
-    """ตรวจสอบว่า endpoint ปัจจุบันตรงกับชื่อ endpoint ที่ระบุ"""
+# Context Processor: Make current endpoint available in templates
+@app.context_processor
+def inject_current_endpoint():
+    """ป้อน current endpoint ให้ templates สามารถเข้าถึงได้"""
     from flask import request
-    current_endpoint = request.endpoint
-    if not current_endpoint:
-        return False
-    # เทียบ endpoint ด้านหน้าจุด (เช่น 'juristic.dashboard' -> 'juristic')
-    return current_endpoint.startswith(endpoint_name)
-
-app.jinja_env.filters['is_active_menu'] = is_active_menu
+    endpoint = request.endpoint or ''
+    endpoint_prefix = endpoint.split('.')[0] if '.' in endpoint else endpoint
+    
+    return {
+        'current_endpoint': endpoint,
+        'current_module': endpoint_prefix
+    }
 
 # --- Register Blueprints ---
 app.register_blueprint(auth_bp)
