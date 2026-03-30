@@ -91,12 +91,19 @@
                 </div>
                 <div class="modal-body p-4">
                     <form id="create-juristic-form" onsubmit="return handleCreateJuristic(event, this)">
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label class="form-label small fw-bold">ชื่อนิติบุคคล / ชื่อโครงการ</label>
                             <input type="text" name="juristic_name" class="form-control form-control-lg bg-light border-0" 
                                 placeholder="หมู่บ้าน เบญจทรัพย์..." required style="border-radius: 12px;">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold">จำนวนห้องทั้งหมด</label>
+                            <input type="number" name="total_rooms" class="form-control form-control-lg bg-light border-0" 
+                                placeholder="50" min="1" max="1000" required style="border-radius: 12px;">
                             <div class="form-text text-info mt-2">
-                                <i class="fas fa-info-circle me-1"></i> โครงการที่สองเป็นต้นไป จะมีสถานะรอชำระเงินรายปี
+                                <i class="fas fa-info-circle me-1"></i> 
+                                <strong>ฟรี:</strong> โครงการแรก ≤50 ห้อง<br>
+                                <strong>ชำระเงิน:</strong> โครงการที่ 2+ หรือ >50 ห้อง (รอชำระเงินรายปี)
                             </div>
                         </div>
                         <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill shadow-sm">

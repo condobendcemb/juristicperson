@@ -8,6 +8,9 @@ class Juristic(db.Model):
     subdomain = db.Column(db.String(50), unique=True, nullable=True)
     api_key = db.Column(db.String(100), nullable=True)
     
+    # Project Info
+    total_rooms = db.Column(db.Integer, nullable=True) # จำนวนห้องทั้งหมดที่วางแผน
+    
     # Billing / SaaS Fields
     status = db.Column(db.String(20), default='active') # active, expired, pending_payment
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

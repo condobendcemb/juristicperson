@@ -98,25 +98,37 @@ def create_juristic():
         return jsonify({"success": False, "message": "สิทธิ์ไม่เพียงพอ"})
 
     juristic_name = request.form.get('juristic_name')
+    total_rooms = request.form.get('total_rooms', type=int)
+    
     if not juristic_name:
         return jsonify({"success": False, "message": "กรุณาระบุชื่อนิติบุคคล"})
+    if not total_rooms or total_rooms < 1:
+        return jsonify({"success": False, "message": "กรุณาระบุจำนวนห้องที่ถูกต้อง"})
 
     # ตรวจสอบจำนวนนิติที่มีอยู่
     mapping_count = JuristicAdminMapping.query.filter_by(customer_id=user.id).count()
     
-    # เงื่อนไข: ถ้ามีอยู่แล้ว 1 ตัว ต้องมีระบบชำระเงินก่อน (ในที่นี้เราจำลองว่าต้องจ่ายเงิน)
-    if mapping_count >= 1:
-        # TODO: ระบบชำระเงิน
-        # return jsonify({"success": False, "message": "คุณได้ใช้โควตาโครงการฟรีครบแล้ว กรุณาชำระเงินเพื่อเปิดโครงการเพิ่ม"})
-        # สำหรับช่วงทดสอบ ให้ผ่านไปก่อนแต่กำหนดสถานะเป็น 'pending_payment'
-        status = 'pending_payment'
-    else:
+    # เงื่อนไขการชำระเงิน:
+    # - โครงการแรกฟรีถ้ามีห้อง <= 50
+    # - โครงการที่ 2+ หรือห้อง > 50 ต้องชำระเงิน
+    is_first_project = mapping_count == 0
+    is_free_eligible = is_first_project and total_rooms <= 50
+    
+    if is_free_eligible:
         status = 'active'
+        payment_message = "ฟรี! โครงการแรกของคุณพร้อมใช้งานแล้ว"
+    else:
+        status = 'pending_payment'
+        if not is_first_project:
+            payment_message = "ต้องชำระเงินรายปีสำหรับโครงการที่สองเป็นต้นไป"
+        else:
+            payment_message = "ต้องชำระเงินรายปีสำหรับโครงการที่มีห้องมากกว่า 50 ห้อง"
 
     try:
         # สร้างนิติบุคคลใหม่ พร้อมอายุการใช้งาน 1 ปี
         new_juristic = Juristic(
             name=juristic_name,
+            total_rooms=total_rooms,
             status=status,
             expiry_date=datetime.utcnow() + timedelta(days=365)
         )
@@ -133,7 +145,11 @@ def create_juristic():
 
         db.session.commit()
         
-        msg = f"สร้างโครงการ {juristic_name} เรียบร้อยแล้ว (ใช้งานได้ถึง {new_juristic.expiry_date.strftime('%d/%m/%Y')})"
+        if status == 'active':
+            msg = f"สร้างโครงการ {juristic_name} เรียบร้อยแล้ว ({total_rooms} ห้อง) - {payment_message}"
+        else:
+            msg = f"สร้างโครงการ {juristic_name} เรียบร้อยแล้ว ({total_rooms} ห้อง) - {payment_message} | สถานะ: รอชำระเงิน"
+        
         return jsonify({"success": True, "message": msg, "redirect": url_for('juristic.select_juristic')})
 
     except IntegrityError:
