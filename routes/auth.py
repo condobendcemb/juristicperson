@@ -1,7 +1,7 @@
 from flask import Blueprint, request, session, redirect, url_for, jsonify, render_template
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
-from extensions import db, limiter
+from extensions import db, csrf, limiter
 from models import Customer, Juristic, RoomResident, Room, JuristicAdminMapping
 from sqlalchemy.exc import IntegrityError
 import pyotp
@@ -181,6 +181,7 @@ def verify_identity():
 
 @auth_bp.route('/send-register-otp', methods=['POST'])
 @limiter.limit("5 per hour")
+@csrf.exempt
 def send_register_otp():
     """ส่ง OTP สำหรับการสมัครสมาชิก"""
     email = request.form.get('email')
@@ -211,6 +212,7 @@ def send_register_otp():
 
 @auth_bp.route('/verify-register-otp', methods=['POST'])
 @limiter.limit("10 per hour")
+@csrf.exempt
 def verify_register_otp():
     """ยืนยัน OTP สำหรับการสมัครสมาชิก"""
     email = request.form.get('email')
