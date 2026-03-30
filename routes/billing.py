@@ -74,7 +74,9 @@ def generate_invoices():
                 total_amt += (r.total_amt + vat_amt)
 
             if total_amt <= 0:
-                # ไม่สร้างใบแจ้งหนี้หากยอดรวมเป็น 0
+                # ไม่สร้างใบแจ้งหนี้หากยอดรวมเป็น 0 แต่ต้อง mark เป็น billed เพื่อลบออกจาก dropdown
+                for r in recs:
+                    r.is_billed = True
                 continue
             
             header = ArHeader(
