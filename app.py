@@ -16,9 +16,22 @@ from routes.customer import customer_bp
 app = Flask(__name__)
 
 # --- Configuration ---
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///juristic.db')
+# app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///juristic.db')
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-123')
+
+# --- Configuration ---
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://user:pass@db:5432/dbname') # หรือค่าเดิมของคุณ
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-123')
+
+# เพิ่มส่วนนี้เข้าไปเพื่อแก้ปัญหา Internal Error ในการกดครั้งแรก
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_pre_ping": True,   # ตรวจสอบ Connection ก่อนใช้งานทุกครั้ง (ถ้าตายจะสร้างใหม่ให้ทันที)
+    "pool_recycle": 300,     # รีเซ็ต Connection ทุก 5 นาที เพื่อป้องกัน Firewall ตัดสาย
+    "pool_size": 10,         # จำนวน Connection ที่เปิดค้างไว้
+    "max_overflow": 20       # จำนวน Connection สูงสุดที่อนุญาตให้เปิดเพิ่มได้ชั่วคราว
+}
 
 # --- Security Setup ---
 # 1. CSRF Protection
