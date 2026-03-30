@@ -81,28 +81,28 @@
             </div>
 
             <ul class="list-unstyled components">
-                <li class="active">
+                <li class="{% if 'juristic.dashboard'|is_active_menu %}active{% endif %}">
                     <a href="{{ url_for('juristic.dashboard') }}"><i class="fas fa-home me-2"></i> หน้าหลัก (Dashboard)</a>
                 </li>
                 
                 {% if session.get('user_role') == 'admin' %}
-                <li>
+                <li class="{% if 'room'|is_active_menu %}active{% endif %}">
                     <a href="{{ url_for('room.list_rooms') }}"><i class="fas fa-door-open me-2"></i> จัดการห้องพัก</a>
                 </li>
-                <li>
+                <li class="{% if 'customer'|is_active_menu %}active{% endif %}">
                     <a href="{{ url_for('customer.index') }}"><i class="fas fa-users me-2"></i> ผู้อยู่อาศัย</a>
                 </li>
 
-                <li>
+                <li class="{% if 'income'|is_active_menu %}active{% endif %}">
                     <a href="{{ url_for('income.index') }}"><i class="fas fa-file-invoice-dollar me-2"></i> ตั้งค่ารายได้</a>
                 </li>
-                <li>
+                <li class="{% if 'record'|is_active_menu %}active{% endif %}">
                     <a href="{{ url_for('record.index') }}"><i class="fas fa-edit me-2"></i> บันทึกรายการ (Meter)</a>
                 </li>
-                <li>
+                <li class="{% if 'billing'|is_active_menu %}active{% endif %}">
                     <a href="{{ url_for('billing.invoice_manage') }}"><i class="fas fa-file-invoice me-2"></i> ใบแจ้งหนี้ (AR)</a>
                 </li>
-                <li>
+                <li class="{% if 'billing'|is_active_menu %}active{% endif %}">
                     <a href="{{ url_for('billing.receipt_manage') }}"><i class="fas fa-file-invoice-dollar me-2"></i> ใบเสร็จรับเงิน (RC)</a>
                 </li>
                 <hr class="mx-3 my-2 border-secondary">

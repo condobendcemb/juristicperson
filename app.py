@@ -146,6 +146,18 @@ def format_period(period_str):
 
 app.jinja_env.filters['format_period'] = format_period
 
+# Jinja Filter: Check if current endpoint is active
+def is_active_menu(endpoint_name):
+    """ตรวจสอบว่า endpoint ปัจจุบันตรงกับชื่อ endpoint ที่ระบุ"""
+    from flask import request
+    current_endpoint = request.endpoint
+    if not current_endpoint:
+        return False
+    # เทียบ endpoint ด้านหน้าจุด (เช่น 'juristic.dashboard' -> 'juristic')
+    return current_endpoint.startswith(endpoint_name)
+
+app.jinja_env.filters['is_active_menu'] = is_active_menu
+
 # --- Register Blueprints ---
 app.register_blueprint(auth_bp)
 app.register_blueprint(juristic_bp)
