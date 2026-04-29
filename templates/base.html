@@ -86,11 +86,8 @@
                 </li>
                 
                 {% if session.get('user_role') == 'admin' %}
-                <li class="{% if current_module == 'room' %}active{% endif %}">
-                    <a href="{{ url_for('room.list_rooms') }}"><i class="fas fa-door-open me-2"></i> จัดการห้องพัก</a>
-                </li>
-                <li class="{% if current_module == 'customer' %}active{% endif %}">
-                    <a href="{{ url_for('customer.index') }}"><i class="fas fa-users me-2"></i> ผู้อยู่อาศัย</a>
+                <li class="{% if current_module in ['room', 'customer'] %}active{% endif %}">
+                    <a href="{{ url_for('room.list_rooms') }}"><i class="fas fa-building-user me-2"></i> จัดการห้องและผู้อยู่อาศัย</a>
                 </li>
 
                 <li class="{% if current_module == 'income' %}active{% endif %}">

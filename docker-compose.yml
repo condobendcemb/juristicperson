@@ -7,12 +7,13 @@ services:
     volumes:
       - .:/app
     restart: always
+    # ใช้ env_file เพื่อดึงค่าจากไฟล์ .env ในโฟลเดอร์ปัจจุบัน
+    env_file:
+      - .env
     environment:
-      # จะดึงค่าจากไฟล์ .env (Supabase)
-      - DATABASE_URL=${DATABASE_URL}
       - FLASK_APP=app.py
       - FLASK_DEBUG=1
-      - SECRET_KEY=your-secret-key-here
+      # ลบบรรทัด DATABASE_URL ออกจากที่นี่ เพราะมันจะไปอ่านจาก .env แทน
     logging:
       driver: "json-file"
       options:
@@ -22,3 +23,4 @@ services:
 networks:
   default:
     name: juristic-network
+    external: true # ตั้งเป็น true หากคุณมี network ชื่อนี้รันอยู่แล้ว (เช่นจาก postgres-db)

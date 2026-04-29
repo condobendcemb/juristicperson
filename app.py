@@ -16,21 +16,18 @@ from routes.customer import customer_bp
 app = Flask(__name__)
 
 # --- Configuration ---
-# app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///juristic.db')
-# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-123')
-
-# --- Configuration ---
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://user:pass@db:5432/dbname') # หรือค่าเดิมของคุณ
+# 1. ดึงค่า DATABASE_URL จาก Environment Variable 
+# ถ้าหาไม่เจอ (เช่น ลืมรัน Docker หรือลืมเซต .env) ให้ถอยไปใช้ sqlite เป็นตัวสำรอง
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///juristic.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-123')
 
-# เพิ่มส่วนนี้เข้าไปเพื่อแก้ปัญหา Internal Error ในการกดครั้งแรก
+# 2. ตั้งค่า Engine Options ให้รองรับทั้ง Local DB และ Supabase
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    "pool_pre_ping": True,   # ตรวจสอบ Connection ก่อนใช้งานทุกครั้ง (ถ้าตายจะสร้างใหม่ให้ทันที)
-    "pool_recycle": 300,     # รีเซ็ต Connection ทุก 5 นาที เพื่อป้องกัน Firewall ตัดสาย
-    "pool_size": 10,         # จำนวน Connection ที่เปิดค้างไว้
-    "max_overflow": 20       # จำนวน Connection สูงสุดที่อนุญาตให้เปิดเพิ่มได้ชั่วคราว
+    "pool_pre_ping": True,    # แก้ปัญหา "กดครั้งแรก Error" (สำคัญมาก!)
+    "pool_recycle": 30,       # รีไซเคิลสายทุก 30 วินาที เพื่อให้เข้ากับ Supabase Pooler
+    "pool_size": 10,
+    "max_overflow": 5
 }
 
 # --- Security Setup ---

@@ -6,11 +6,7 @@ customer_bp = Blueprint('customer', __name__)
 
 @customer_bp.route('/customer', methods=['GET'])
 def index():
-    j_id = session.get('juristic_id')
-    if not j_id: return redirect(url_for('juristic.select_juristic'))
-    juristic = Juristic.query.get(j_id)
-    customers = Customer.query.filter_by(juristic_id=j_id).all()
-    return render_template('customer.html', customers=customers, juristic=juristic)
+    return redirect(url_for('room.list_rooms'))
 
 @customer_bp.route('/customer/add', methods=['POST'])
 def add_customer():

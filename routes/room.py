@@ -12,8 +12,11 @@ def list_rooms():
     
     types_query = db.session.query(Room.type).filter(Room.juristic_id == j_id, Room.type.isnot(None), Room.type != '').distinct().all()
     types_list = [t[0] for t in types_query if t[0]]
+    
+    # ดึงข้อมูลผู้อยู่อาศัยทั้งหมดเพื่อใช้ในหน้าเดียวกัน
+    customers = Customer.query.filter_by(juristic_id=j_id).all()
 
-    return render_template('rooms.html', rooms=rooms, juristic=juristic, types=types_list)
+    return render_template('rooms.html', rooms=rooms, juristic=juristic, types=types_list, customers=customers)
 
 @room_bp.route('/room/add', methods=['POST'])
 def add_room():
@@ -120,9 +123,10 @@ def get_customers_json():
     j_id = session.get('juristic_id')
     if not j_id: return jsonify([])
     customers = Customer.query.filter_by(juristic_id=j_id, active=True).all()
-    return jsonify([{"id": c.id, "name": c.name} for c in customers])
+    # Return id, name, and email for the frontend select dropdown
+    return jsonify([{"id": c.id, "name": c.name, "email": c.email} for c in customers])
 
-@room_bp.route('/room/assign_resident', methods=['POST'])
+@room_bp.route('/room/assign', methods=['POST'])
 def assign_resident():
     j_id = session.get('juristic_id')
     if not j_id: return jsonify({"success": False, "message": "Unauthorized"})

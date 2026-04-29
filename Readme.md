@@ -43,7 +43,7 @@ A comprehensive web application for juristic persons and apartment management, b
 ---
 *Developed for efficient juristic person operations.*
 
-# ---
+# --- github
 git add . 
 git commit -m "update logs"
 git push

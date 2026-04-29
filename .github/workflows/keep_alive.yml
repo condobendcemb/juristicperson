@@ -1,0 +1,17 @@
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    # รันทุกๆ วันที่ 1 และ 15 ของเดือน เวลาเที่ยงคืน (หรือตั้งทุก 3 วันก็ได้)
+    - cron: '0 0 1,15 * *' 
+  workflow_dispatch: # ช่วยให้เรากดรันเองมือได้เพื่อทดสอบ
+
+jobs:
+  ping_supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Request to Supabase API
+        run: |
+          curl -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/" \
+          -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
